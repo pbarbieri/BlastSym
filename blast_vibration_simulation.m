@@ -1,4 +1,4 @@
-function [BlastTable] = BlastSimulation(BlastTable,BlastAttModel,SiteX,SiteY,Nsim,OutputFolder)
+function [BlastTable] = blast_vibration_simulation(BlastTable,BlastAttModel,SiteProp,SiteX,SiteY,Nsim,OutputFolder)
 %% ========================================================================
 % Copyright SRK/FIUBA (C) 2018
 % Coded By: P. Barbieri (pbarbieri@fi.uba.ar)
@@ -6,7 +6,7 @@ function [BlastTable] = BlastSimulation(BlastTable,BlastAttModel,SiteX,SiteY,Nsi
 % Date: 19-01-2019
 % -------------------------------------------------------------------------
 % USAGE: 
-%   BlastSimulation: Simulates blast vibrations
+%   blast_vibration_simulation: Simulates blast vibrations
 %   
 % -------------------------------------------------------------------------
 % INPUT:
@@ -19,9 +19,11 @@ function [BlastTable] = BlastSimulation(BlastTable,BlastAttModel,SiteX,SiteY,Nsi
 %       BlastAttModel   Blast attenuation model defined by muLnPPV(R) and
 %                       sigmalLnPPV(R) in [mm/s2] where R [m/kg^-05] is the
 %                       adimetional distance.
+%       SiteProp        Sturct with site properties
 %       SiteX           Site X coordinate
 %       SiteY           Site Y coordiante
 %       Nsim            Number of scenario simulations
+%       Seed            
 %       OutputFolder    Folder where the simulated records will be saved
 % -------------------------------------------------------------------------
 % OUTPUT:
@@ -48,29 +50,34 @@ function [BlastTable] = BlastSimulation(BlastTable,BlastAttModel,SiteX,SiteY,Nsi
 
 if ~isdir(OutputFolder), mkdir(OutputFolder); end
 % Determine screening, muLnPPV, sigmaLnPPV, direction cosines of each blast
-BlastTable = screening(BlastTable,SiteX,SiteY,BlastAttModel);
-
-% Simulation of site properties
-[SiteTable] = site_simulation(Nsim);
+BlastTable = screening(BlastTable,SiteX,SiteY,BlastAttModel,SiteProp);
 
 % Simulation of wave existation for each site
-[BlastTable] = wave_simulation(BlastTable,SiteTable,Nsim,OutputFolder);
+[BlastTable] = wave_simulation(BlastTable,SiteProp,Nsim,OutputFolder);
 
 
 
 end
 
-function [BlastTable,NBlast] = screening(BlastTable,SiteX,SiteY,AttenuationModel)
+function [BlastTable,NBlast] = screening(BlastTable,SiteX,SiteY,AttenuationModel,SiteProp)
 
+% Blast detonation data
+NBlast = size(BlastTable,1);
+X = BlastTable.X;
+Y = BlastTable.Y;
+T = BlastTable.T;
+W = BlastTable.W;
 BlastTable = table2struct(BlastTable);
+
+% Attenuation model
 muLnPPV = AttenuationModel.muLnPPV;
 sigmaLnPPV = AttenuationModel.sigmaLnPPV;
 
-NBlast = size(BlastTable,1);
-X = [BlastTable.X];
-Y = [BlastTable.Y];
-T = [BlastTable.T];
-W = [BlastTable.W];
+% Site properties
+Vp = SiteProp.Vp;
+Vs = SiteProp.Vs;
+Vr = SiteProp.Vr;
+
 
 % Screening widht
 D = zeros(NBlast,NBlast);
@@ -86,7 +93,6 @@ ScreeningWidth = mode(D);
 
 % Number of blast
 for k = 1:NBlast
-        
     % Remove future blasts
     X_filtered = X; X_filtered = X_filtered(T<T(k));
     Y_filtered = Y; Y_filtered = Y_filtered(T<T(k));
@@ -122,10 +128,15 @@ for k = 1:NBlast
     BlastTable(k).Dist = Dist;
     
     % Blast attenuation parameters
-    R = Dist./sqrt(W);
+    R = Dist./sqrt(W(k));
     BlastTable(k).R = R;
     BlastTable(k).muLnPPV = muLnPPV(R);
     BlastTable(k).sigmaLnPPV = sigmaLnPPV(R);
+    
+    % Wave travel times
+    BlastTable(k).tp = Dist/Vp;
+    BlastTable(k).ts = Dist/Vs;
+    BlastTable(k).tr = Dist/Vr;
 end
 
 BlastTable = struct2table(BlastTable);
@@ -152,50 +163,7 @@ TSPar.f = f;
 TSPar.df = f(2)-f(1);
 TSPar.t = linspace(0,(NUP-1)*dt,NUP);
 TSPar.tmax = (NUP-1)*dt;
-
-end
-
-function [SiteTable] = site_simulation(Nsim)
-
-% Pressure wave velocity  [m/s]
-Vpmin = 1800;
-Vppeak = 2000;
-Vpmax = 2200;
-VpDist = makedist('triangular','a',Vpmin,'b',Vppeak,'c',Vpmax);
-SiteTable.Vp = random(VpDist,Nsim,1);
-
-% Shear wave velocity [m/s]
-Vsmin = 800;
-Vspeak = 1000;
-Vsmax = 1200;
-VsDist = makedist('triangular','a',Vsmin,'c',Vsmax,'b',Vspeak);
-Vs = random(VsDist,Nsim,1);
-SiteTable.Vs = Vs;
-
-% Poisson coefficient  [ ]
-numin = 0.18;
-mumax = 0.22;
-nupeak = 0.20;
-nuDist = makedist('triangular','a',numin,'c',mumax,'b',nupeak);
-nu = random(nuDist,Nsim,1);
-SiteTable.nu = nu;
-
-% Raleigh wave velocity [m/s]
-SiteTable.Vr = (0.054.*nu.^4-0.08*nu.^3-0.038*nu.^2+0.195*nu+0.874).*Vs;
-SiteTable = struct2table(SiteTable);
-
-% Energy divition between waves
-CompWaveEnergyMin = 0.05;
-CompWaveEnergyMax = 0.15;
-CompWaveEnergy = random(makedist('uniform',CompWaveEnergyMin,CompWaveEnergyMax),Nsim,1);
-ShearWaveEnergyMin = 0.2;
-ShearWaveEnergyMax = 0.3;
-ShearWaveEnergy = random(makedist('uniform',ShearWaveEnergyMin,ShearWaveEnergyMax),Nsim,1);
-SurfaceWaveEnergy = 1 - CompWaveEnergy - ShearWaveEnergy;
-
-SiteTable.CompWaveEnergy = CompWaveEnergy;
-SiteTable.ShearWaveEnergy = ShearWaveEnergy;
-SiteTable.SurfaceWaveEnergy = SurfaceWaveEnergy;
+TSPar.dt = dt;
 end
 
 function [SiteTable] = wave_simulation(BlastTable,SiteTable,Nsim,OutputFolder)
@@ -205,44 +173,33 @@ function [SiteTable] = wave_simulation(BlastTable,SiteTable,Nsim,OutputFolder)
 NBlast = size(BlastTable,1);
 
 % Attenuaiton
-muLnPPV = [BlastData.muLnPPV];
-sigmaLnPPV = [BlastData.sigmaLnPPV];
+muLnPPV = BlastTable.muLnPPV;
+sigmaLnPPV = [BlastTable.sigmaLnPPV];
 NsigmaPPV = random(makedist('normal',0,1),Nsim,1);
-PPV = zeros(Nsim,Nblast);
+PPV = zeros(Nsim,NBlast);
 for k = 1:Nsim
-    for j = 1:Nblast
+    for j = 1:NBlast
         PPV(k,j) = exp(muLnPPV(j)+NsigmaPPV(k)*sigmaLnPPV(j));
     end 
-end
-
-% Chaotic number generator
-r = zeros(Nsim,NBlast);
-chaos = 0.54;
-for j = 1:Nsim
-    for k = 1:Nblast
-        r(j,k) = chaos;
-        chaos = 2*chaos^2-1;
-    end
 end
 
 % Delay simulation
 muDelay = 0; %[s]
 sigmaDelay = 0.1/1000; %[s]
-Delay = random(makedist('normal',muDelay,sigmaDelay),Nsim,NBlast) + repmat(BlastData.T.',Nsim,1);
+Delay = random(makedist('normal',muDelay,sigmaDelay),Nsim,NBlast) + repmat(BlastTable.T.',Nsim,1);
 
 % Arrival P wave time
-PArrivalTime = repmat(BlastData.Dist.',Nsim,1)./repmat(SiteTable.Vp,1,NBlast) + Delay;
+PArrivalTime = repmat(BlastTable.Dist.',Nsim,1)./repmat(SiteTable.Vp,1,NBlast) + Delay;
 % Arrival S wave time
-SArrivalTime = repmat(BlastData.Dist.',Nsim,1)./repmat(SiteTable.Vs,1,NBlast) + Delay;
+SArrivalTime = repmat(BlastTable.Dist.',Nsim,1)./repmat(SiteTable.Vs,1,NBlast) + Delay;
 % Arrival R wave time
-RArrivalTime = repmat(BlastData.Dist.',Nsim,1)./repmat(SiteTable.Vr,1,NBlast) + Delay;
+RArrivalTime = repmat(BlastTable.Dist.',Nsim,1)./repmat(SiteTable.Vr,1,NBlast) + Delay;
 
 % Single blast P-wave frequency range [Hz] 
 PWFmin = 100;
 PWFmax = 200;
 PWFreqDist = makedist('uniform',PWFmin,PWFmax);
 PWFreq = random(PWFreqDist,Nsim,1);
-
 
 % Single blast S-wave frequency range [Hz] 
 SWFmin = 40;
@@ -257,33 +214,34 @@ RWFreqDist = makedist('uniform',RWFmin,RWFmax);
 RWFreq = random(RWFreqDist,Nsim,1);
 
 % P-wave Single Blast Damping
-PWXimin = 100;
-PWXimax = 200;
+PWXimin = 0.1;
+PWXimax = 0.2;
 PWXiDist = makedist('uniform',PWXimin,PWXimax);
 PWXi = random(PWXiDist,Nsim,1);
 
 % S-wave Single Blast Damping
-SWXimin = 100;
-SWXimax = 200;
+SWXimin = 0.05;
+SWXimax = 0.1;
 SWXiDist = makedist('uniform',SWXimin,SWXimax);
 SWXi = random(SWXiDist,Nsim,1);
 
 % R-wave Single Blast Damping
-RWXimin = 100;
-RWXimax = 200;
+RWXimin = 0.01;
+RWXimax = 0.05;
 RWXiDist = makedist('uniform',RWXimin,RWXimax);
 RWXi = random(RWXiDist,Nsim,1);
 
 
+
+
 for j = 1:size(SiteTable,1)
-    [IM] = get_blast_sequence(BlastTable,PPV(j,:),chaos(j,:),PArrivalTime(j,:),SArrivalTime(j,:),RArrivalTime(j,:),PWFreq(k),SWFreq(j),RWFreq(j),PWXi(j),SWXi(j),RWXi(j),TSPar);
+    get_blast_sequence(BlastTable,PPV(j,:),PArrivalTime(j,:),SArrivalTime(j,:),RArrivalTime(j,:),PWFreq(k),SWFreq(j),RWFreq(j),PWXi(j),SWXi(j),RWXi(j),SiteTable.CompWaveEnergy,SiteTable.ShearWaveEnergy,SiteTable.SurfaceWaveEnergy,TSPar);
 end
 
 
 end
 
-function [IM,AT,AF,VT,VF,UT,UF] = get_blast_sequence(BlastTable,PPV,chaos,PArrivalTim,SArrivalTime,RArrivalTime,PWFreq,SWFreq,RWFreq,PWXi,SWXi,RWXi,CompWaveEnergy,ShearWaveEnergy,SurfaceWaveEnergy,TSPar)
-
+function [ ] = get_blast_sequence(BlastTable,PPV,PArrivalTim,SArrivalTime,RArrivalTime,PWFreq,SWFreq,RWFreq,PWXi,SWXi,RWXi,CompWaveEnergy,ShearWaveEnergy,SurfaceWaveEnergy,TSPar)
 
 f = TSPar.f;
 NUP = TSPar.NUP;
@@ -294,17 +252,101 @@ PVFo = get_damped_armonic(f,0,PWFreq,PWXi);
 SVFo = get_damped_armonic(f,0,SWFreq,SWXi);
 RVFo = get_damped_armonic(f,0,RWFreq,RWXi);
 
+[PATo,~] = Get_TS(PVFo.*w,f);
+[SATo,~] = Get_TS(SVFo.*w,f);
+[RATo,~] = Get_TS(RVFo.*w,f);
+
+[FSp,FSs,FSr] = get_scale_parameters(PATo,SATo,RATo,CompWaveEnergy,ShearWaveEnergy,SurfaceWaveEnergy);
+
+
 % Energy of each signal
-PRMS = sqrt(2*(PVFo(1:NUP).*w)*(PVFo(1:NUP).*w).');
-SRMS = sqrt(2*(SVFo(1:NUP).*w)*(SVFo(1:NUP).*w).');
-RRMS = sqrt(2*(RVFo(1:NUP).*w)*(RVFo(1:NUP).*w).');
+PRMS = sqrt(2*dot((PVFo(1:NUP).*w),(PVFo(1:NUP).*w).'));
+SRMS = sqrt(2*dot((SVFo(1:NUP).*w),(SVFo(1:NUP).*w).'));
+RRMS = sqrt(2*dot((RVFo(1:NUP).*w),(RVFo(1:NUP).*w).'));
 
 M = repmat([PRMS SRMS RRMS],3,1).*[(1-CompWaveEnergy) CompWaveEnergy CompWaveEnergy; ShearWaveEnergy (1-ShearWaveEnergy) ShearWaveEnergy ;SurfaceWaveEnergy SurfaceWaveEnergy (1-SurfaceWaveEnergy)];
 FS = M\[0;0;0];
 
-PVFo = PVFo*FS(1);
-SVFo = SVFo*FS(2);
-RVFo = RVFo*FS(3);
+PVFo = PVFo*FS(1); [PVTo,~] = Get_TS(PVFo,f);
+SVFo = SVFo*FS(2); [SVTo,~] = Get_TS(SVFo,f);
+RVFo = RVFo*FS(3); [RVTo,~] = Get_TS(RVFo,f);
+
+% Scale to unit amplitude
+Vmax = max([max(abs(PVTo)) max(abs(SVTo)) max(abs(RVTo))]);
+PVFo = PVFo/Vmax;
+SVFo = SVFo/Vmax;
+RVFo = RVFo/Vmax;
+
+
+NBlast = size(BlastTable,1);
+% Tangential wave amplitude (% of longitudinal wave)
+TangAmp = random(makedist('uniform',-0.5,0.5),NBlast,1);
+
+
+% Chaotic number generator
+r = zeros(NUP,NBlast);
+chaos = 0.54;
+for j = 1:NBlast
+    for k = 1:NUP
+        r(k,j) = chaos;
+        chaos = 2*chaos^2-1;
+    end
+end
+Rj = sum(r,1);
+
+R = 0.8; % Relative ammount of noise energy
+
+
+
+
+end
+
+function [FSp,FSs,FSr] = get_scale_parameters(PA,SA,RA,CompWaveEnergy,ShearWaveEnergy,SurfaceWaveEnergy)
+
+PA = PA/sqrt(dot(PA,PA));
+SA = SA/sqrt(dot(SA,SA));
+RA = RA/sqrt(dot(RA,RA));
+
+PP = dot(PA,PA);
+PS = dot(PA,SA);
+PR = dot(PA,RA);
+SS = dot(SA,SA);
+SR = dot(SA,RA);
+RR = dot(RA,RA);
+
+RSMo = dot(PA+SA+RA,PA+SA+RA);
+
+G = @(x) PP*x(1)^2 + SS*x(2)^2 + RR*x(3)^2 + 2*PS*x(1)*x(2) + 2*PR*x(1)*x(3) + 2*SR*x(2)*x(3);
+F = @(x) [PP*x(1)^2/CompWaveEnergy^2 ; SS*x(2)^2/ShearWaveEnergy^2 ; RR*x(3)^2/SurfaceWaveEnergy^2] - ones(3,1)*G(x);
+J = @(x) 2*[PP*x(1)/CompWaveEnergy^2 ; SS*x(2)/ShearWaveEnergy^2 ; RR*x(3)/SurfaceWaveEnergy] - 2*[PP,PS,PR;PS,SS,SR;PR,SR,RR]*[x(1);x(2);x(3)];
+
+x = NaN(3,100);
+a = [PP*(CompWaveEnergy^2-1) ; SS*(ShearWaveEnergy^2-1); RR*(SurfaceWaveEnergy^2-1)];
+b = [2*CompWaveEnergy^2*(PS+PR); 2*ShearWaveEnergy^2*(PS+SR); 2*SurfaceWaveEnergy^2*(PR+SR) ] ;
+c = [CompWaveEnergy^2*(SS+RR+2*SR);ShearWaveEnergy^2*(PP+RR+2*PR); SurfaceWaveEnergy^2*(PP+SS+2*PS) ];
+x(:,1) = max([(-b+sqrt(b.^2-4.*a.*c))./(2.*a),(-b-sqrt(b.^2-4.*a.*c))./(2.*a)],[],2);
+for k = 2:100
+    x(:,k) = x(:,k-1)-J(x(:,k-1))\F(x(:,k-1));
+end
+
+FSp = x(1);
+FSs = x(2);
+FSr = x(3);
+
+close all
+hold on
+plot(x(1,:),'-r');
+plot(x(2,:),'-b');
+plot(x(3,:),'-k');
+hold off
+grid on
+
+
+(CompWaveEnergy - sqrt(x(1,end)^2*PP/G(x(:,end))))/CompWaveEnergy
+(ShearWaveEnergy - sqrt(x(2,end)^2*SS/G(x(:,end))))/ShearWaveEnergy
+(SurfaceWaveEnergy - sqrt(x(3,end)^2*RR/G(x(:,end))))/SurfaceWaveEnergy
+
+
 
 
 end
@@ -312,7 +354,7 @@ end
 function [F] = get_damped_armonic(f,to,fo,xi)
 w = 2*pi*f;
 wo = 2*pi*fo;
-F = 1./(-w.^2+2*1i*xi*w*wo+wo^2).*exp(-1i*2*pi*f*to);
+F = 1./(w.^2-2*1i*xi*w*wo-wo^2).*exp(-1i*w*to);
 end
 
 function [] = get_gaussian_noise(f,to,fo,cov)

@@ -1,4 +1,4 @@
-function [] = simulate_blast_sequence(Nsim,OutputFolder)
+function [] = blast_sequence_simulation(Nsim,OutputFolder)
 %% ========================================================================
 % Copyright SRK/FIUBA (C) 2018
 % Coded By: P. Barbieri (pbarbieri@fi.uba.ar)
@@ -6,7 +6,7 @@ function [] = simulate_blast_sequence(Nsim,OutputFolder)
 % Date: 19-01-2019
 % -------------------------------------------------------------------------
 % USAGE: 
-%   simulate_blast_sequence: Simulates single hole blast sequences
+%   blast_sequence_simulation: Simulates single hole blast sequences
 %   
 % -------------------------------------------------------------------------
 % INPUT:

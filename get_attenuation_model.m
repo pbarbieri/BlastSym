@@ -12,7 +12,7 @@ function [Model] = get_attenuation_model(XlsFile,PlotFlag)
 % -------------------------------------------------------------------------
 % INPUT:
 %   XlsFile     Excel file with R, W and PPV data
-%   PlotFlag    Flat, 1 for ploting.
+%   PlotFlag    Flag, 1 for ploting.
 %
 % -------------------------------------------------------------------------
 % OUTPUT:
