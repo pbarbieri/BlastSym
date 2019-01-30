@@ -44,7 +44,7 @@ function [VT,AT,t] = get_regular_blast_sequence(BlastTable,SiteX,SiteY,Vw,PPV)
 
 
 Vpulse = @(t,to,fo,xi) sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*(t>=to);
-Apulse = @(t,to,fo,xi) (2*pi*fo*sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)) - xi*2*pi*fo* sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)) ).*(t>=to);
+Apulse = @(t,to,fo,xi) (2*pi*fo*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)) - xi*2*pi*fo* sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)) ).*(t>=to);
 
 NBlast = size(BlastTable,1);
 BlastTable = table2struct(BlastTable);

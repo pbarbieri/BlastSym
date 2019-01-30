@@ -38,6 +38,15 @@ VFarm = VFarm*FSarm;
 VTarm = VTarm*FSarm;
 AFarm = AFarm*FSarm;
 ATarm = ATarm*FSarm;
+% Comparison of integration methdos
+Apulse = @(t,to,fo,xi) (2*pi*fo*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)) - 2*xi*pi*fo* sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)) ).*(t>=to);
+AT_teo = Apulse(t,to,fo,xi_arm).';
+AT_teo(isnan(AT_teo)) = 0;
+
+AT_time = zeros(NUP,1);
+for k = 2:NUP
+    AT_time(k) = 2*(VTarm(k)-VTarm(k-1))/dt-AT_time(k);
+end
 
 %% Plots
 
@@ -58,7 +67,7 @@ ylabel('|VF|');
 ylim([0 max(1.2*max(abs(VFgauss)),1.2*max(abs(VFarm)))])
 grid on
 legend({'Gaussian pulse','Armonic pulse'});
-set(gca,'Position',[0.05,0.14,0.85,0.79]);
+set(gca,'Position',[0.07,0.14,0.85,0.83]);
 
 hfig = figure(2);
 set(hfig,'Color',[1 1 1],'Position',[150,200,1000,300]);
@@ -70,7 +79,7 @@ grid on
 xlabel('t');
 ylabel('VT');
 legend({'Gaussian pulse','Armonic pulse'});
-set(gca,'Position',[0.05,0.14,0.85,0.79]);
+set(gca,'Position',[0.07,0.14,0.85,0.83]);
 
 hfig = figure(3);
 set(hfig,'Color',[1 1 1],'Position',[300,400,1000,300]);
@@ -82,4 +91,33 @@ grid on
 xlabel('t');
 ylabel('AT');
 legend({'Gaussian pulse','Armonic pulse'});
-set(gca,'Position',[0.05,0.14,0.85,0.79]);
+set(gca,'Position',[0.07,0.14,0.85,0.83]);
+
+hfig = figure(4);
+set(hfig,'Color',[1 1 1],'Position',[500,30,1000,300]);
+hold on
+plot(t(1:idx),AT_teo(1:idx),'-b','linewidth',1);
+plot(t(1:idx),ATarm(1:idx),'-r','linewidth',1);
+plot(t(1:idx),AT_time(1:idx),'-k','linewidth',1);
+hold off
+grid on
+xlabel('t');
+ylabel('AT');
+legend({'Theorical integration','Freq. integration','Time integration'});
+set(gca,'Position',[0.07,0.14,0.85,0.83]);
+
+%% Build signa with PEER
+ATpeer = Vpulse(t,to,fo,xi_arm).';
+ATpeer(isnan(ATpeer)) = 0;
+[ATpeer,VTpeer,UTpeer] = PEER_Procesing(ATpeer,t,5);
+FSpeer = 1/max(abs(VTpeer));
+ATpeer = ATpeer*FSpeer;
+VTpeer = VTpeer*FSpeer;
+UTpeer = UTpeer*FSpeer;
+
+hfig = figure(5);
+set(hfig,'Color',[1 1 1],'Position',[500,100,1000,300]);
+plot(t(1:idx),ATpeer(1:idx));
+
+
+

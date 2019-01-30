@@ -88,7 +88,7 @@ if PlotFlag
     set(gca,'yscale','log');
     legend(hp,{'Measured data','Median fit','95% confidence fit','Proposed model'});
     xlabel('R/M^{-0.5} [m/kg^{-0.5}]');
-    ylabel('PPV [m/s]');
+    ylabel('PPV [mm/s]');
 end
 
 
