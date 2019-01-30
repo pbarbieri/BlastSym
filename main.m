@@ -7,7 +7,7 @@ sigmaDelay = 0.05*Delay;
 
 %% Blast sequence table
 % Number of blast in x dir
-Nx = 10;
+Nx = 20;
 % Number of blast in y dir
 Ny = 10;
 % Distance between blasts [m]

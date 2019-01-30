@@ -82,6 +82,13 @@ VT = VT*FS;
 AT = AT*FS;
 VT(isnan(VT)) = 0;
 AT(isnan(AT)) = 0;
+% Remove unncesary pre-pading
+tini = (min([BlastTable.T])+min([BlastTable.R]/Vw))*0.8;
+VT = VT(t>tini);
+AT = AT(t>tini);
+t = t(t>tini); t = t-t(1);
+end
+
 
 % NFFT = pow2(nextpow2(NPo)+1);
 % df = 1/(NFFT*dt);
@@ -100,4 +107,3 @@ AT(isnan(AT)) = 0;
 % t = t(1:NPo);
 % VT = VT(1:NPo);
 % AT = AT(1:NPo);
-end
