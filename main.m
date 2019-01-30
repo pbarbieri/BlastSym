@@ -45,7 +45,7 @@ hold off
 grid on
 
 %% Blast sequence
-[VT,AT,VF,AF,t,f] = get_regular_blast_sequence(BlastSeqTable,SiteX,SiteY,Vw,PPV);
+[VT,AT,t] = get_regular_blast_sequence(BlastSeqTable,SiteX,SiteY,Vw,PPV);
 
 figure(3)
 plot(t,VT)
