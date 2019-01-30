@@ -13,7 +13,7 @@ NFFT = 2^ceil(log2(1/(dfmin*dt)));
 df = 1/(NFFT*dt);
 NUP = NFFT/2+1;
 f = 1/(2*dt)*linspace(0,1,NUP).';
-t = linspace(0,(NUP-1)*dt,NUP);
+t = linspace(0,(NUP-1)*dt,NUP).';
 
 %% Gaussian pulse
 [VFgauss] = get_gaussian_noise(f,to,fo,c_gauss);
@@ -28,7 +28,7 @@ ATgauss = ATgauss*FSgauss;
 
 %% Damped armonic pulse
 Vpulse = @(t,to,fo,xi) sin(2*pi*fo*(t-to)).*exp(-2*pi*fo*xi*(t-to)).*(t>=to);
-VTarm = Vpulse(t,to,fo,xi_arm).';
+VTarm = Vpulse(t,to,fo,xi_arm);
 VTarm(isnan(VTarm)) = 0;
 [VFarm,farm] = Get_FS(VTarm,t);
 AFarm = VFarm*2*pi.*farm;
@@ -40,7 +40,7 @@ AFarm = AFarm*FSarm;
 ATarm = ATarm*FSarm;
 % Comparison of integration methdos
 Apulse = @(t,to,fo,xi) (2*pi*fo*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)) - 2*xi*pi*fo* sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)) ).*(t>=to);
-AT_teo = Apulse(t,to,fo,xi_arm).';
+AT_teo = Apulse(t,to,fo,xi_arm);
 AT_teo(isnan(AT_teo)) = 0;
 
 AT_time = zeros(NUP,1);
@@ -107,9 +107,9 @@ legend({'Theorical integration','Freq. integration','Time integration'});
 set(gca,'Position',[0.07,0.14,0.85,0.83]);
 
 %% Build signa with PEER
-ATpeer = Vpulse(t,to,fo,xi_arm).';
+ATpeer = Vpulse(t,to,fo,xi_arm);
 ATpeer(isnan(ATpeer)) = 0;
-[ATpeer,VTpeer,UTpeer] = PEER_Procesing(ATpeer,t,5);
+[ATpeer,VTpeer,UTpeer] = PEER_Procesing(ATpeer,t,10);
 FSpeer = 1/max(abs(VTpeer));
 ATpeer = ATpeer*FSpeer;
 VTpeer = VTpeer*FSpeer;
@@ -117,7 +117,24 @@ UTpeer = UTpeer*FSpeer;
 
 hfig = figure(5);
 set(hfig,'Color',[1 1 1],'Position',[500,100,1000,300]);
-plot(t(1:idx),ATpeer(1:idx));
+plot(t(1:idx),ATpeer(1:idx),'-b','linewidth',2);
+grid on
+xlabel('t [s]');
+ylabel('AT');
+
+hfig = figure(6);
+set(hfig,'Color',[1 1 1],'Position',[500,100,1000,300]);
+plot(t(1:idx),VTpeer(1:idx),'-b','linewidth',2);
+grid on
+xlabel('t [s]');
+ylabel('VT');
+
+hfig = figure(7);
+set(hfig,'Color',[1 1 1],'Position',[500,100,1000,300]);
+plot(t(1:idx),UTpeer(1:idx),'-b','linewidth',2);
+grid on
+xlabel('t [s]');
+ylabel('UT');
 
 
 
