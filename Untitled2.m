@@ -1,0 +1,32 @@
+dt = 0.01;
+Tmax = 3;
+to = 1;
+fo = 40;
+xi = 0.1+0.05*1i;
+
+
+
+NPo = ceil(Tmax/dt);
+NFFT = pow2(nextpow2(NPo)+1);
+df = 1/(NFFT*dt);
+while df>0.1
+    NFFT = NFFT*2;
+    df = 1/(NFFT*dt);
+end
+NUP = NFFT/2+1;
+f = 1/(2*dt)*linspace(0,1,NUP).';
+t = linspace(0,(NUP-1)*dt,NUP);
+
+[AF] = get_gaussian_noise(f,to,fo,xi);
+[AT,~] = Get_TS(AF,f);
+
+
+close all
+figure(1)
+plot(f,abs(AF))
+xlim([0 2*fo]);
+grid on
+
+figure(2)
+plot(t(1:NPo),AT(1:NPo));
+grid on

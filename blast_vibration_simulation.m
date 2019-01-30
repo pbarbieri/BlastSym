@@ -357,9 +357,3 @@ wo = 2*pi*fo;
 F = 1./(w.^2-2*1i*xi*w*wo-wo^2).*exp(-1i*w*to);
 end
 
-function [] = get_gaussian_noise(f,to,fo,cov)
-% Normal noise with complex mean and deviation
-mu = fo;
-sigma = mu*cov;
-AF = exp(-(f-mu).^2/(2*sigma^2))/sigma.*exp(-1i*2*pi*f*to);
-end

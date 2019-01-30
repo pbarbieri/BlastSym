@@ -7,9 +7,9 @@ sigmaDelay = 0.05*Delay;
 
 %% Blast sequence table
 % Number of blast in x dir
-Nx = 1;
+Nx = 10;
 % Number of blast in y dir
-Ny = 2;
+Ny = 10;
 % Distance between blasts [m]
 S = 10;
 
@@ -34,8 +34,8 @@ Vw = 2500;
 PPV = 25/1000;
 
 %% Site coordiantes
-SiteX = 300;
-SiteY = 0;
+SiteX = 257;
+SiteY = 136;
 close all
 figure(1)
 hold on
@@ -45,17 +45,7 @@ hold off
 grid on
 
 %% Blast sequence
-[VT,VF,t,f] = get_regular_blast_sequence(BlastSeqTable,SiteX,SiteY,Vw,PPV);
-AF = VF.*(2*pi*f);
-[AT,~] = Get_TS(AF,f);
-
-figure(2)
-plot(f,abs(VF))
-xlim([0 1000])
-grid on
-xlabel('f [Hz]');
-ylabel('V [m/s]');
-
+[VT,AT,VF,AF,t,f] = get_regular_blast_sequence(BlastSeqTable,SiteX,SiteY,Vw,PPV);
 
 figure(3)
 plot(t,VT)
@@ -70,5 +60,11 @@ grid on
 xlabel('t [s]');
 ylabel('A [m/s/s]');
 
+
+% AT = AT(t<0.14);
+% t = t(t<0.14);
+% AT = AT(t>0.1);
+% t = t(t>0.1);
+% t = t-t(1);
 
 

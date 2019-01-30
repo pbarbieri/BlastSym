@@ -1,4 +1,4 @@
-function [VT,VF,t,f] = get_regular_blast_sequence(BlastTable,SiteX,SiteY,Vw,PPV)
+function [VT,AT,VF,AF,t,f] = get_regular_blast_sequence(BlastTable,SiteX,SiteY,Vw,PPV)
 %% ========================================================================
 % Copyright SRK/FIUBA (C) 2018
 % Coded By: P. Barbieri (pbarbieri@fi.uba.ar)
@@ -43,6 +43,8 @@ function [VT,VF,t,f] = get_regular_blast_sequence(BlastTable,SiteX,SiteY,Vw,PPV)
 % =========================================================================
 
 
+pulse = @(t,to,fo,xi) sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*(t>=to);
+
 
 NBlast = size(BlastTable,1);
 BlastTable = table2struct(BlastTable);
@@ -55,51 +57,40 @@ end
 
 % Set timeseries parameters
 Tmax = max([BlastTable.T])+max([BlastTable.R])/Vw*1.2;
-[TSPar] = set_timeseries_parameters(Tmax,8/1000);
-t = TSPar.t;
-f = TSPar.f;
-NUP = TSPar.NUP;
-
+fo = min([BlastTable.fo]);
+dt = 10^(floor(log10(1/(4*fo))));
+NPo = ceil(Tmax/dt)+1;
+t = linspace(0,(NPo-1)*dt,NPo);
 % Build blast sequecnce
-VF = zeros(NUP,NBlast);
+VT = zeros(NPo,NBlast);
 for k = 1:NBlast
     fo = BlastTable(k).fo;
     xi = BlastTable(k).xi;
     T = BlastTable(k).T;
     R = BlastTable(k).R;
-    VF(:,k) = get_damped_armonic(f,T+R/Vw,fo,xi);
-    [VTo,~] = Get_TS(VF(:,k),f);
-    VF(:,k) = VF(:,k)/max(abs(VTo));
+    to = T+R/Vw;
+    VT(:,k) = pulse(t,to,fo,xi);
+    VT(:,k) = VT(:,k)/max(abs(VT(:,k)));
 end
-VF = sum(VF,2);
-[VT,~] = Get_TS(VF,f);
-FS = PPV/max(abs(VT));
-VT = VT*FS;
-VF = VF*FS;
+VT = sum(VT,2);
+VT = VT/max(abs(VT))*PPV;
+VT(isnan(VT)) = 0;
+
+NFFT = pow2(nextpow2(NPo)+1);
+df = 1/(NFFT*dt);
+while df>0.1
+    NFFT = NFFT*2;
+    df = 1/(NFFT*dt);
 end
-
-
-function [TSPar] = set_timeseries_parameters(Tmax,delay)
-
-dt = 10^floor(log10(min(delay)))/1000;
-NP = ceil((1.2*Tmax)/dt);   
-
-
-NFFT = pow2(nextpow2(NP)+1);
 NUP = NFFT/2+1;
-df = 1/(2*NUP*dt);
-while df>0.1 % Si el df es muy chico hay ruido en la señal
-    NP = 2*NP;
-    NFFT = pow2(nextpow2(NP)+1);
-    NUP = NFFT/2+1;
-    df = 1/(2*NUP*dt);
-end
-f = 1/(2*dt)*linspace(0,1,NUP).';
-TSPar.NFFT = NFFT;
-TSPar.NUP = NUP;
-TSPar.f = f;
-TSPar.df = f(2)-f(1);
-TSPar.t = linspace(0,(NUP-1)*dt,NUP);
-TSPar.tmax = (NUP-1)*dt;
-TSPar.dt = dt;
+VT(NUP) = 0;
+t = linspace(0,(NUP-1)*dt,NUP);
+
+[VF,f] = Get_FS(VT,t);
+AF = 2*pi*f.*VF;
+[AT,t] = Get_TS(AF,f);
+
+t = t(1:NPo);
+VT = VT(1:NPo);
+AT = AT(1:NPo);
 end
