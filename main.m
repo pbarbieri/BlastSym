@@ -1,41 +1,65 @@
-clear all
-%% Single blast parameters
-fo = 800;
-xi = 0.25;
-Delay = 8/1000;
-sigmaDelay = 0.05*Delay;
+function [] = main(XlsFile,fo,xi,sigmaDelay,Vw,PPV,SiteX,SiteY,R)
+%% ========================================================================
+% Copyright SRK/FIUBA (C) 2019
+% Coded By: P. Barbieri (pbarbieri@fi.uba.ar)
+% Version: V103
+% Date: 30-01-2019
+% -------------------------------------------------------------------------
+% USAGE: 
+%   main: Simulates blast vibrations
+%   
+% -------------------------------------------------------------------------
+% INPUT:
+%       XlsFile         Excel file with detonation sequence
+%       fo              Predominant frequency of indvidual blast [Hz]
+%       xi              Damping of indvidual blast [Hz]   
+%       sigmaDelay      Standar deviation of the delay [ms]
+%       Vw              Velocity of wave propagation
+%       PPV             PPV [m/s]
+%       SiteX           Site X coordinate
+%       SiteY           Site Y coordiante
+% -------------------------------------------------------------------------
+% OUTPUT:
+%       
+% -------------------------------------------------------------------------
+% EXAMPLE:
+%   
+% -------------------------------------------------------------------------
+% BIBLIO:
+%   [1] D. Blair, "Blast vibration control in the presence of delay scatter
+%       and random fluctuations between blastholes," International journal 
+%       for numerical and analytical methods in geomechanics
+%   [2] D. Blair, "Statistical models for ground vibration and airblast,"
+%       Fragblast, vol. 3, no. 4, pp. 335--364, 1999
+% -------------------------------------------------------------------------
+% VALIDATE:
+% Version:
+% Date:
+% Validated by:
+% -------------------------------------------------------------------------
+% LOG
+%   V101    30/01/2019      First version
+% =========================================================================
 
-%% Blast sequence table
-% Number of blast in x dir
-Nx = 20;
-% Number of blast in y dir
-Ny = 10;
-% Distance between blasts [m]
-S = 10;
-
-BlastSeqTable = build_test_blast_sequence(Nx,Ny,S,Delay,[1],50);
-
-BlastSeqTable = table2struct(BlastSeqTable);
+clc
+% Read data
+[~,~,BlastSeqTable] = xlsread(XlsFile);
+BlastSeqTable = cell2struct(BlastSeqTable(2:end,:),BlastSeqTable(1,:),2);
 NBlast = numel(BlastSeqTable);
 RandomDelay = random(makedist('normal',0,sigmaDelay),NBlast,1);
 for k = 1:NBlast
     BlastSeqTable(k).fo = fo;
     BlastSeqTable(k).xi = xi;
     if k>1
-        BlastSeqTable(k).T = BlastSeqTable(k).T + RandomDelay(k);
+        BlastSeqTable(k).T = (BlastSeqTable(k).T + RandomDelay(k));
     end
 end
 BlastSeqTable = struct2table(BlastSeqTable);
+BlastSeqTable.T = BlastSeqTable.T/1000;
 
-%% Wave propagation velocity
-Vw = 2500;
+% build blast sequence
+[UT,VT,AT,t] = get_regular_blast_sequence(BlastSeqTable,SiteX,SiteY,Vw,PPV,R);
 
-%% PPV [m/s]
-PPV = 25/1000;
-
-%% Site coordiantes
-SiteX = 257;
-SiteY = 136;
 close all
 figure(1)
 hold on
@@ -44,8 +68,12 @@ scatter([SiteX,SiteX],[SiteY,SiteY],'^r','filled');
 hold off
 grid on
 
-%% Blast sequence
-[VT,AT,t] = get_regular_blast_sequence(BlastSeqTable,SiteX,SiteY,Vw,PPV);
+
+figure(2)
+plot(t,UT)
+grid on
+xlabel('t [s]');
+ylabel('U [m]');
 
 figure(3)
 plot(t,VT)
@@ -60,11 +88,6 @@ grid on
 xlabel('t [s]');
 ylabel('A [m/s/s]');
 
-
-% AT = AT(t<0.14);
-% t = t(t<0.14);
-% AT = AT(t>0.1);
-% t = t(t>0.1);
-% t = t-t(1);
+end
 
 
