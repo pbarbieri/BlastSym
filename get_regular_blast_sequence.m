@@ -1,4 +1,4 @@
-function [VT,AT,t] = get_regular_blast_sequence(BlastSeqTable,SiteX,SiteY,Vw,PPV,R)
+function [UT,VT,AT,t] = get_regular_blast_sequence(BlastSeqTable,SiteX,SiteY,Vw,PPV,R)
 %% ========================================================================
 % Copyright SRK/FIUBA (C) 2018
 % Coded By: P. Barbieri (pbarbieri@fi.uba.ar)
@@ -65,12 +65,24 @@ Delta = 0.01; % remaining amplitud at -t1
 t1 = 10*dt;
 k = log(1/Delta-1)/t1;
 L = @(t) 1./(1+exp(-k*t));
-Vpulse = @(t,to,fo,xi) sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to);
-Apulse = @(t,to,fo,xi) 2*pi*fo*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
-                       - xi*2*pi*fo* sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
-                       + sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to).*(1-L(t-to));
+Upulse = @(t,to,fo,xi) sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to);
+
+Vpulse = @(t,to,fo,xi) 2*pi*fo*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
+                       - xi*2*pi*fo*sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
+                       + sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*k.*L(t-to).*(1-L(t-to));
+
+Apulse = @(t,to,fo,xi) -(2*pi*fo).^2*sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
+                       -(2*pi*fo).^2*xi*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
+                       + 2*pi*fo*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*k.*L(t-to).*(1-L(t-to))...
+                       - xi*(2*pi*fo)^2*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
+                       + (xi*2*pi*fo)^2*sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
+                       - xi*2*pi*fo* sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*k.*L(t-to).*(1-L(t-to))... 
+                       + 2*pi*fo*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*k.*L(t-to).*(1-L(t-to))...
+                       - 2*pi*fo*xi*sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*k.*L(t-to).*(1-L(t-to))...
+                       + sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*k.^2.*(L(t-to).*(1-L(t-to)).^2-L(t-to).^2.*(1-L(t-to)));        
 
 % Build blast sequecnce
+UT = zeros(NPo,NBlast);
 VT = zeros(NPo,NBlast);
 AT = zeros(NPo,NBlast);
 % % Randomizer
@@ -88,8 +100,10 @@ for k = 1:NBlast
     VT(:,k) = Vpulse(t,to(k),fo(k),xi(k));
     FS = 1/max(abs(VT(:,k)));
     VT(:,k) = FS*VT(:,k);
+    UT(:,k) = FS*Upulse(t,to(k),fo(k),xi(k));
     AT(:,k) = FS*Apulse(t,to(k),fo(k),xi(k));
 end
+UT = sum(UT,2);
 VT = sum(VT,2);
 AT = sum(AT,2);
 FS = PPV/max(abs(VT));
@@ -98,6 +112,7 @@ AT = AT*FS;
 
 % Remove unncesary pre-pading
 tini = min(to)*0.8;
+UT = UT(t>tini);
 VT = VT(t>tini);
 AT = AT(t>tini);
 t = t(t>tini); t = t-t(1);

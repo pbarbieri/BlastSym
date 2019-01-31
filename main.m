@@ -58,7 +58,7 @@ BlastSeqTable = struct2table(BlastSeqTable);
 BlastSeqTable.T = BlastSeqTable.T/1000;
 
 % build blast sequence
-[VT,AT,t] = get_regular_blast_sequence(BlastSeqTable,SiteX,SiteY,Vw,PPV,R);
+[UT,VT,AT,t] = get_regular_blast_sequence(BlastSeqTable,SiteX,SiteY,Vw,PPV,R);
 
 close all
 figure(1)
@@ -70,13 +70,19 @@ grid on
 
 
 figure(2)
+plot(t,UT)
+grid on
+xlabel('t [s]');
+ylabel('U [m]');
+
+figure(3)
 plot(t,VT)
 grid on
 xlabel('t [s]');
 ylabel('V [m/s]');
 
 
-figure(3)
+figure(4)
 plot(t,AT)
 grid on
 xlabel('t [s]');
