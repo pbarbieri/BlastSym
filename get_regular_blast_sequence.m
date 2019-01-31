@@ -1,4 +1,4 @@
-function [VT,AT,t] = get_regular_blast_sequence(BlastTable,SiteX,SiteY,Vw,PPV)
+function [VT,AT,t] = get_regular_blast_sequence(BlastSeqTable,SiteX,SiteY,Vw,PPV,R)
 %% ========================================================================
 % Copyright SRK/FIUBA (C) 2018
 % Coded By: P. Barbieri (pbarbieri@fi.uba.ar)
@@ -19,6 +19,7 @@ function [VT,AT,t] = get_regular_blast_sequence(BlastTable,SiteX,SiteY,Vw,PPV)
 %       SiteY           Site Y coordiante
 %       Vw              Velocity of wave propagation
 %       PPV             PPV [m/s]
+%       R               % of randomization
 % -------------------------------------------------------------------------
 % OUTPUT:
 %       
@@ -42,68 +43,62 @@ function [VT,AT,t] = get_regular_blast_sequence(BlastTable,SiteX,SiteY,Vw,PPV)
 %   V101    19/01/2019      First version
 % =========================================================================
 
+NBlast = size(BlastSeqTable,1);
+Yblast = BlastSeqTable.Y;
+Xblast = BlastSeqTable.X;
+T = BlastSeqTable.T;
+fo = BlastSeqTable.fo;
+xi = BlastSeqTable.xi;
+D = sqrt((SiteX-Xblast).^2+(SiteY-Yblast).^2);
+to = T+D/Vw;
+BlastSeqTable.D = D;
 
-Vpulse = @(t,to,fo,xi) sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*(t>=to);
-Apulse = @(t,to,fo,xi) (2*pi*fo*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)) - xi*2*pi*fo* sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)) ).*(t>=to);
-
-NBlast = size(BlastTable,1);
-BlastTable = table2struct(BlastTable);
-for k = 1:NBlast
-    Xblast = BlastTable(k).X;
-    Yblast = BlastTable(k).Y;
-    R = sqrt((SiteX-Xblast)^2+(SiteY-Yblast)^2);
-    BlastTable(k).R=R;
-end
 
 % Set timeseries parameters
-Tmax = max([BlastTable.T])+max([BlastTable.R])/Vw*1.2;
-fo = min([BlastTable.fo]);
-dt = 10^(floor(log10(1/(4*fo))));
+Tmax = (max(BlastSeqTable.T)+max(BlastSeqTable.D)/Vw)*1.2;
+dt = 10^(floor(log10(1/(8*min(fo(fo>0))))));
 NPo = ceil(Tmax/dt)+1;
-t = linspace(0,(NPo-1)*dt,NPo);
+t = linspace(0,(NPo-1)*dt,NPo).';
+
+% Single blast generatorn
+Delta = 0.01; % remaining amplitud at -t1
+t1 = 10*dt;
+k = log(1/Delta-1)/t1;
+L = @(t) 1./(1+exp(-k*t));
+Vpulse = @(t,to,fo,xi) sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to);
+Apulse = @(t,to,fo,xi) 2*pi*fo*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
+                       - xi*2*pi*fo* sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
+                       + sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to).*(1-L(t-to));
+
 % Build blast sequecnce
 VT = zeros(NPo,NBlast);
 AT = zeros(NPo,NBlast);
+% % Randomizer
+% r = zeros(NBlast*NPo,1);
+% r(1) = 0.52; for k = 2:NBlast*NPo, r(k) = 2*r(k-1)^2-1; end
+% r = reshape(r,NPo,NBlast);
+% tr = linspace(0,(2*NPo-1)*dt,2*NPo).'-NPo*dt;
 for k = 1:NBlast
-    fo = BlastTable(k).fo;
-    xi = BlastTable(k).xi;
-    T = BlastTable(k).T;
-    R = BlastTable(k).R;
-    to = T+R/Vw;
-    VT(:,k) = Vpulse(t,to,fo,xi);
+%     vo = Vpulse(tr,to(k),fo(k),xi(k));
+%     v = zeros(NPo,NPo);
+%     for j = 1:NPo
+%         v(:,j) = vo(NPo-j+1:2*NPo-j).*r(:,k);
+%     end
+%     VT(:,k) = (1-R)*vo(NPo+1:2*NPo)+ R/sum(r(:,k))*sum(v,2);
+    VT(:,k) = Vpulse(t,to(k),fo(k),xi(k));
     FS = 1/max(abs(VT(:,k)));
     VT(:,k) = FS*VT(:,k);
-    AT(:,k) = FS*Apulse(t,to,fo,xi);
+    AT(:,k) = FS*Apulse(t,to(k),fo(k),xi(k));
 end
 VT = sum(VT,2);
 AT = sum(AT,2);
 FS = PPV/max(abs(VT));
 VT = VT*FS;
 AT = AT*FS;
-VT(isnan(VT)) = 0;
-AT(isnan(AT)) = 0;
+
 % Remove unncesary pre-pading
-tini = (min([BlastTable.T])+min([BlastTable.R]/Vw))*0.8;
+tini = min(to)*0.8;
 VT = VT(t>tini);
 AT = AT(t>tini);
 t = t(t>tini); t = t-t(1);
 end
-
-
-% NFFT = pow2(nextpow2(NPo)+1);
-% df = 1/(NFFT*dt);
-% while df>0.1
-%     NFFT = NFFT*2;
-%     df = 1/(NFFT*dt);
-% end
-% NUP = NFFT/2+1;
-% VT(NUP) = 0;
-% t = linspace(0,(NUP-1)*dt,NUP);
-% 
-% [VF,f] = Get_FS(VT,t);
-% AF = 2*pi*f.*VF;
-% [AT,t] = Get_TS(AF,f);
-% 
-% t = t(1:NPo);
-% VT = VT(1:NPo);
-% AT = AT(1:NPo);

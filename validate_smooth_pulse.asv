@@ -1,0 +1,35 @@
+
+% Set exitation parameters
+Tmax = 1;
+fo = 200;
+xi = 0.25;
+to = 0.3;
+
+% Set timeseries parameters
+dt = 10^(floor(log10(1/(8*min(fo(fo>0))))));
+NPo = ceil(Tmax/dt)+1;
+t = linspace(0,(NPo-1)*dt,NPo).';
+
+% Single blast generatorn
+Delta = 0.01; % remaining amplitud at -t1
+t1 = 10*dt;
+k = log(1/Delta-1)/t1;
+L = @(t) 1./(1+exp(-k*t));
+Vpulse = @(t,to,fo,xi) sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to);
+Apulse = @(t,to,fo,xi) 2*pi*fo*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
+                       - xi*2*pi*fo* sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
+                       + sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to).*(1-L(t-to));
+                   
+                   
+VT = Vpulse(t,to,fo,xi);
+VF = get_FS(VT,t);
+AT_teo = Apulse(t,to,fo,xi);
+AT_time = zeros(NPo,1);
+for k = 2:NPo
+    AT_time(k) = 2*(VT(k)-VT(k-1))/dt-AT_time(k);
+end
+[AT_f
+
+
+                   
+                   
