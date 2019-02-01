@@ -1,6 +1,6 @@
 function [] = main(XlsFile,fo,xi,sigmaDelay,Vw,PPV,SiteX,SiteY,R)
 %% ========================================================================
-% Copyright SRK/FIUBA (C) 2019
+% Copyright SRK/FIUBA (C) 1984
 % Coded By: P. Barbieri (pbarbieri@fi.uba.ar)
 % Version: V103
 % Date: 30-01-2019
