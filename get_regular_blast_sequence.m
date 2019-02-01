@@ -1,4 +1,4 @@
-function [UT,VT,AT,t] = get_regular_blast_sequence(BlastSeqTable,SiteX,SiteY,Vw,PPV,R)
+function [UT,VT,AT,t] = get_regular_blast_sequence(BlastSeqTable,PPV,R)
 %% ========================================================================
 % Copyright SRK/FIUBA (C) 2018
 % Coded By: P. Barbieri (pbarbieri@fi.uba.ar)
@@ -15,9 +15,6 @@ function [UT,VT,AT,t] = get_regular_blast_sequence(BlastSeqTable,SiteX,SiteY,Vw,
 %                       - T [s] time of explotion
 %                       - fo [Hz] natural frec of each blast
 %                       - xi []   dampling coefficient of each blast
-%       SiteX           Site X coordinate
-%       SiteY           Site Y coordiante
-%       Vw              Velocity of wave propagation
 %       PPV             PPV [m/s]
 %       R               % of randomization
 % -------------------------------------------------------------------------
@@ -44,71 +41,84 @@ function [UT,VT,AT,t] = get_regular_blast_sequence(BlastSeqTable,SiteX,SiteY,Vw,
 % =========================================================================
 
 NBlast = size(BlastSeqTable,1);
-Yblast = BlastSeqTable.Y;
-Xblast = BlastSeqTable.X;
-T = BlastSeqTable.T;
+to = BlastSeqTable.to;
 fo = BlastSeqTable.fo;
 xi = BlastSeqTable.xi;
-D = sqrt((SiteX-Xblast).^2+(SiteY-Yblast).^2);
-to = T+D/Vw;
-BlastSeqTable.D = D;
 
 
 % Set timeseries parameters
-Tmax = (max(BlastSeqTable.T)+max(BlastSeqTable.D)/Vw)*1.2;
+Tmax = max(BlastSeqTable.to)*1.2;
 dt = 10^(floor(log10(1/(8*min(fo(fo>0))))));
 NPo = ceil(Tmax/dt)+1;
 t = linspace(0,(NPo-1)*dt,NPo).';
+Tpulse = log(0.001)/(-2*pi*min(fo)*min(xi));
+NPpulse = ceil(Tpulse/dt);
+tpulse = linspace(0,(NPpulse-1)*dt,NPpulse).';
 
 % Single blast generatorn
 Delta = 0.01; % remaining amplitud at -t1
 t1 = 10*dt;
 k = log(1/Delta-1)/t1;
 L = @(t) 1./(1+exp(-k*t));
-Upulse = @(t,to,fo,xi) sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to);
+Upulse = @(t,to,fo,xi) sin(2*pi*fo*(t-to-t1)).*exp(-xi*2*pi*fo*(t-to-t1)).*L(t-to-t1);
 
-Vpulse = @(t,to,fo,xi) 2*pi*fo*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
-                       - xi*2*pi*fo*sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
-                       + sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*k.*L(t-to).*(1-L(t-to));
+Vpulse = @(t,to,fo,xi) (2*pi*fo*cos(2*pi*fo*(t-to-t1)).*min(exp(-xi*2*pi*fo*(t-to-t1)),1000).*L(t-to-t1)...
+                       - xi*2*pi*fo*sin(2*pi*fo*(t-to-t1)).*min(exp(-xi*2*pi*fo*(t-to-t1)),1000).*L(t-to-t1)...
+                       + sin(2*pi*fo*(t-to-t1)).*min(exp(-xi*2*pi*fo*(t-to-t1)),1000).*k.*L(t-to-t1).*(1-L(t-to-t1)));
 
-Apulse = @(t,to,fo,xi) -(2*pi*fo).^2*sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
-                       -(2*pi*fo).^2*xi*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
-                       + 2*pi*fo*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*k.*L(t-to).*(1-L(t-to))...
-                       - xi*(2*pi*fo)^2*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
-                       + (xi*2*pi*fo)^2*sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*L(t-to)...
-                       - xi*2*pi*fo* sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*k.*L(t-to).*(1-L(t-to))... 
-                       + 2*pi*fo*cos(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*k.*L(t-to).*(1-L(t-to))...
-                       - 2*pi*fo*xi*sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*k.*L(t-to).*(1-L(t-to))...
-                       + sin(2*pi*fo*(t-to)).*exp(-xi*2*pi*fo*(t-to)).*k.^2.*(L(t-to).*(1-L(t-to)).^2-L(t-to).^2.*(1-L(t-to)));        
+Apulse = @(t,to,fo,xi) -(2*pi*fo).^2*sin(2*pi*fo*(t-to-t1)).*exp(-xi*2*pi*fo*(t-to-t1)).*L(t-to-t1)...
+                       -(2*pi*fo).^2*xi*cos(2*pi*fo*(t-to-t1)).*exp(-xi*2*pi*fo*(t-to-t1)).*L(t-to-t1)...
+                       + 2*pi*fo*cos(2*pi*fo*(t-to-t1)).*exp(-xi*2*pi*fo*(t-to-t1)).*k.*L(t-to-t1).*(1-L(t-to-t1))...
+                       - xi*(2*pi*fo)^2*cos(2*pi*fo*(t-to-t1)).*exp(-xi*2*pi*fo*(t-to-t1)).*L(t-to-t1)...
+                       + (xi*2*pi*fo)^2*sin(2*pi*fo*(t-to-t1)).*exp(-xi*2*pi*fo*(t-to-t1)).*L(t-to-t1)...
+                       - xi*2*pi*fo* sin(2*pi*fo*(t-to-t1)).*exp(-xi*2*pi*fo*(t-to-t1)).*k.*L(t-to-t1).*(1-L(t-to-t1))... 
+                       + 2*pi*fo*cos(2*pi*fo*(t-to-t1)).*exp(-xi*2*pi*fo*(t-to-t1)).*k.*L(t-to-t1).*(1-L(t-to-t1))...
+                       - 2*pi*fo*xi*sin(2*pi*fo*(t-to-t1)).*exp(-xi*2*pi*fo*(t-to-t1)).*k.*L(t-to-t1).*(1-L(t-to-t1))...
+                       + sin(2*pi*fo*(t-to-t1)).*exp(-xi*2*pi*fo*(t-to-t1)).*k.^2.*(L(t-to-t1).*(1-L(t-to-t1)).^2-L(t-to-t1).^2.*(1-L(t-to-t1)));        
 
 % Build blast sequecnce
-UT = zeros(NPo,NBlast);
 VT = zeros(NPo,NBlast);
-AT = zeros(NPo,NBlast);
-% % Randomizer
-% r = zeros(NBlast*NPo,1);
-% r(1) = 0.52; for k = 2:NBlast*NPo, r(k) = 2*r(k-1)^2-1; end
-% r = reshape(r,NPo,NBlast);
-% tr = linspace(0,(2*NPo-1)*dt,2*NPo).'-NPo*dt;
-for k = 1:NBlast
-%     vo = Vpulse(tr,to(k),fo(k),xi(k));
-%     v = zeros(NPo,NPo);
-%     for j = 1:NPo
-%         v(:,j) = vo(NPo-j+1:2*NPo-j).*r(:,k);
-%     end
-%     VT(:,k) = (1-R)*vo(NPo+1:2*NPo)+ R/sum(r(:,k))*sum(v,2);
-    VT(:,k) = Vpulse(t,to(k),fo(k),xi(k));
-    FS = 1/max(abs(VT(:,k)));
-    VT(:,k) = FS*VT(:,k);
-    UT(:,k) = FS*Upulse(t,to(k),fo(k),xi(k));
-    AT(:,k) = FS*Apulse(t,to(k),fo(k),xi(k));
+if R>0
+    % Randomizer
+    r = zeros(NBlast*NPo,1);
+    r(1) = 0.52; for k = 2:NBlast*NPo, r(k) = 2*r(k-1)^2-1; end
+    r = reshape(r,NPo,NBlast);
+    tr = round(linspace(0,(2*NPo-1)*dt,2*NPo).'-NPo*dt,abs(ceil(log10(dt))));
+    for k = 1:NBlast
+        vo = Vpulse(tr,to(k),fo(k),xi(k));
+        v = zeros(NPo,1);
+        for j = 1:NPo
+            v(j) = flipud(vo(j+1:NPo+j)).'*r(:,k);
+        end
+        VT(:,k) = (1-R)*vo(NPo+1:2*NPo)+ R/sum(r(:,k).^2)*v;
+    end
+    VT = sum(VT,2);
+    UT = zeros(NPo,1);
+    AT = zeros(NPo,1);
+    for k = 2:NPo-1
+        AT(k) = (VT(k+1)-VT(k-1))/(2*dt);
+        UT(k) = UT(k-1)+(1-1/2)*dt*VT(k-1)+1/2*dt*VT(k);
+    end
+    AT(NPo) = (VT(end)-VT(end-1))/dt;
+    UT(NPo) = UT(NPo-1)+(1-1/2)*dt*VT(NPo-1)+1/2*dt*VT(NPo);
+else
+    UT = zeros(NPo,NBlast);
+    AT = zeros(NPo,NBlast);
+    for k = 1:NBlast
+        VT(:,k) = Vpulse(t,to(k),fo(k),xi(k));
+        FS = 1./max(abs(VT(:,k)));
+        VT(:,k) = FS*VT(:,k);
+        UT(:,k) = FS*Upulse(t,to(k),fo(k),xi(k));
+        AT(:,k) = FS*Apulse(t,to(k),fo(k),xi(k));
+    end 
+    UT = sum(UT,2);
+    VT = sum(VT,2);
+    AT = sum(AT,2);
 end
-UT = sum(UT,2);
-VT = sum(VT,2);
-AT = sum(AT,2);
 FS = PPV/max(abs(VT));
 VT = VT*FS;
 AT = AT*FS;
+UT = UT*FS;
 
 % Remove unncesary pre-pading
 tini = min(to)*0.8;
