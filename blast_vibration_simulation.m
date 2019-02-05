@@ -89,7 +89,7 @@ end
 D = triu(D);
 D = D(:);
 D = D(D>0);
-ScreeningWidth = mode(D);
+ScreeningWidth = min(D);
 
 % Number of blast
 for k = 1:NBlast

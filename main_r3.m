@@ -1,4 +1,4 @@
-function [] = main_r2(AttModel,Site,WaveGenPar,BlastModel,OutputFileName)
+function [] = main_r2(Run,AttModel,Site,SeedGen,BlastModel)
 %% ========================================================================
 % Copyright SRK/FIUBA (C) 2019
 % Coded By: P. Barbieri (pbarbieri@fi.uba.ar)
@@ -10,14 +10,11 @@ function [] = main_r2(AttModel,Site,WaveGenPar,BlastModel,OutputFileName)
 %   
 % -------------------------------------------------------------------------
 % INPUT:
-%       XlsFile         Excel file with detonation sequence
-%       fo              Predominant frequency of indvidual blast [Hz]
-%       xi              Damping of indvidual blast [Hz]   
-%       sigmaDelay      Standar deviation of the delay [ms]
-%       Vw              Velocity of wave propagation
-%       PPV             PPV [m/s]
-%       SiteX           Site X coordinate
-%       SiteY           Site Y coordiante
+%       Run         
+%       AttModel    
+%       Site         
+%       SeedGen     
+%       BlastModel   
 % -------------------------------------------------------------------------
 % OUTPUT:
 %       
@@ -43,57 +40,31 @@ function [] = main_r2(AttModel,Site,WaveGenPar,BlastModel,OutputFileName)
 
 clc
 % Build blast table
-[BlastSeqTable] = build_blast_sequence_table(XlsFile,fo,xi,SiteX,SiteY,sigmaDelay,Vw);
+[BlastSeqTable] = build_blast_sequence_table(BlastModel,AttModel,Site,Run.Nsim);
 
 % Build blast sequence
-[UT,VT,AT,t] = get_regular_blast_sequence(BlastSeqTable,PPV,R);
+[UT,VT,AT,t] = bluid_blast_sequence(BlastSeqTable,PPV,R);
 
-save([OutputFileName,'.mat'],'BlastSeqTable','UT','VT','AT','t');
-write_csv_output(AT,t,OutputFileName);
+% save([OutputFileName,'.mat'],'BlastSeqTable','UT','VT','AT','t');
+% write_csv_output(AT,t,OutputFileName);
 
-% % Plots
-% close all
-% hfig = figure(1);
-% set(hfig,'Color',[1 1 1],'Position',[50,50,470*1.5,400*1.5]);
-% hold on
-% scatter(BlastSeqTable.X,BlastSeqTable.Y,'ok','filled');
-% scatter([SiteX,SiteX],[SiteY,SiteY],'^r','filled');
-% hold off
-% grid on
-% legend({'Blast Holes','Site'},'location','southwest','FontSize',12);
-% xlabel('X [m]','FontSize',12);
-% ylabel('Y [m]','FontSize',12);
-% 
-% hfig = figure(2);
-% set(hfig,'Color',[1 1 1],'Position',[100,100,1000,300]);
-% plot(t,UT)
-% grid on
-% xlabel('t [s]');
-% ylabel('U [m]');
-% set(gca,'Position',[0.07,0.14,0.85,0.8]);
-% 
-% hfig = figure(3);
-% set(hfig,'Color',[1 1 1],'Position',[150,150,1000,300]);
-% plot(t,VT)
-% grid on
-% xlabel('t [s]');
-% ylabel('V [m/s]');
-% set(gca,'Position',[0.07,0.14,0.85,0.8]);
-% 
-% hfig = figure(4);
-% set(hfig,'Color',[1 1 1],'Position',[200,200,1000,300]);
-% plot(t,AT)
-% grid on
-% xlabel('t [s]');
-% ylabel('A [m/s/s]');
-% set(gca,'Position',[0.07,0.14,0.85,0.8]);
+
 
 end
 
-function [BlastSeqTable] = build_blast_sequence_table(XlsFile,fo,xi,SiteX,SiteY,sigmaDelay,Vw)
+function [BlastSeqTable] = build_blast_sequence_table(BlastModel,AttModel,Site,Nsim)
+
+SiteX = BlastModel.SiteX;
+SiteY = BlastModel.SiteY;
+Sfun = BlastModel.Sfun;
+Cp = Site.Cp;
+Cs = Site.Cs;
+Cr = Site.Cr;
+muLnPPv = AttModel.muLnPPV;
+sigmaLnPPv = AttModel.sigmaLnPPv;
 
 % Read data
-[~,~,BlastSeqTable] = xlsread(XlsFile);
+[~,~,BlastSeqTable] = xlsread(BlastModel.SequenceFile);
 % Build Blast sequence table
 BlastSeqTable = cell2struct(BlastSeqTable(2:end,:),BlastSeqTable(1,:),2);
 BlastSeqTable = struct2table(BlastSeqTable);
@@ -103,33 +74,108 @@ Xblast = BlastSeqTable.X;
 T = BlastSeqTable.T;
 W = BlastSeqTable.W;
 
+% Distances and geometry
 D = sqrt((SiteX-Xblast).^2+(SiteY-Yblast).^2);
 R = D./sqrt(W);
-fo = ones(NBlast,1)*fo;
-xi = ones(NBlast,1)*xi;
-RandomDelay = random(makedist('normal',0,sigmaDelay),NBlast,1);
-RandomDelay(1) = 0; % Avoid T<0 in first blast
-T = (T + RandomDelay)/1000;
-to = T+D/Vw;
+% unitary direction vector from site to blast
+l = [ones(Nblast,1)*SiteX, ones(Nblast,1)*SiteX]-[Xblast,Yblast]; % Versor blast 2 site
+l = l./sqrt(l(:,1).^2+l(:,2).^2);
+n = [-l(2,:),l(1,:)];    
+% directing cosines for radial vibration
+alpha = atan(l(:,2)/l(:,1));
+Rx = cos(alpha);
+Ry = sin(alpha);
+% directing cosines for tangential displacement
+Tx = cos(alpha+pi/2);
+Ty = sin(alpha+pi/2);
 
-a  = -1.6863;
-b = 6.2693;
-muLnPPV = @(r)a*log(r)+b;
-sigmaLnPPV = 0.4880;
-epsilon = random(makedist('normal',0,1),1,1);
-PPV = exp(muLnPPV(R)+epsilon*sigmaLnPPV);
+% Arrival times
+RandomDelay = random(makedist('normal',0,BlastModel.sigmaDelay),NBlast,Nsim);
+RandomDelay(1,:) = 0; % Avoid T<0 in first blast
+T = (repmat(T,1,Nsim) + RandomDelay)/1000;
+tp = T+repmat(D,1,Nsim)/Cp;
+ts = T+repmat(D,1,Nsim)/Cs;
+tr = T+repmat(D,1,Nsim)/Cr;
+
+% Screening widht
+Dmat = zeros(NBlast,NBlast);
+for k = 1:NBlast
+    for j = 1:NBlast
+        Dmat(k,j) = sqrt((X(k)-X(j))^2+(Y(k)-Y(j))^2);
+    end
+end
+Dmat = triu(Dmat);
+Dmat = Dmat(:);
+Dmat = Dmat(Dmat>0);
+ScreeningWidth = min(Dmat); % minumun distnace between contiguos blasholes
+
+Ns = NaN(NBlast,1);
+S = ones(NBlast,1);
+if BlastModel.Sflag
+    for k = 1:NBlast
+        % Remove future blasts
+        X_filtered = Xblast; X_filtered = X_filtered(T<T(k));
+        Y_filtered = Yblast; Y_filtered = Y_filtered(T<T(k));
+        % Remove blasts from same borehole
+        idx = and(X_filtered~=X(k),Y_filtered~=Y(k));
+        X_filtered = X_filtered(idx);
+        Y_filtered = Y_filtered(idx);
+        % Screening polygon
+        Coord = zeros(4,2);
+        Coord(1,:) = [SiteX,SiteY]-n*ScreeningWidth;
+        Coord(2,:) = [X(k),Y(k)]-n*ScreeningWidth;
+        Coord(3,:) = [X(k),Y(k)]+n*ScreeningWidth;
+        Coord(4,:) = [SiteX,SiteY]+n*ScreeningWidth;
+        % Count blasts
+        [in,on] = inpolygon(X_filtered,Y_filtered,Coord(:,1),Coord(:,2));
+        idx = or(in,on);
+        Ns(k) = sum(idx);
+        % Screening
+        S(k) = Sfun(Ns(k),D(k));
+    end
+end
+
+% Ratio between the amplitude of the transversal and longitudinal vibration
+Tranv2LongRatio = random(makedist('uniform',-0.5,0.5),NBlast,1);
+
+
+epsilon = random(makedist('normal',0,1),1,Nsim);
+epsilon = repmat(epsilon,NBlast,1);
+PPV = exp(muLnPPV(repmat(R,1,Nsim))+epsilon*sigmaLnPPV(repmat(R,1,Nsim)));
+
 
 BlastSeqTable.T = BlastSeqTable.T/1000;
-BlastSeqTable.to = to;
+BlastSeqTable.tp = tp;
+BlastSeqTable.ts = ts;
+BlastSeqTable.tr = tr;
 BlastSeqTable.D = D;
 BlastSeqTable.R = R;
+BlastSeqTable.l = l;
+BlastSeqTable.n = n;
+BlastSeqTable.alpha = alpha;
+BlastSeqTable.Rx = Rx;
+BlastSeqTable.Ry = Ry;
+BlastSeqTable.Tx = Tx;
+BlastSeqTable.Ty = Ty;
+BlastSeqTable.S = S;
+BlastSeqTable.Tranv2LongRatio = Tranv2LongRatio;
 BlastSeqTable.PPV = PPV;
-BlastSeqTable.fo = fo;
-BlastSeqTable.xi = xi;
+
+% fo = ones(NBlast,1)*fo;
+% xi = ones(NBlast,1)*xi;
+% a  = -1.6863;
+% b = 6.2693;
+% muLnPPV = @(r)a*log(r)+b;
+% sigmaLnPPV = 0.4880;
+% epsilon = random(makedist('normal',0,1),1,1);
+% PPV = exp(muLnPPV(R)+epsilon*sigmaLnPPV);
+% BlastSeqTable.fo = fo;
+% BlastSeqTable.xi = xi;
+% BlastSeqTable.PPV = PPV;
 
 end
 
-function [UT,VT,AT,t] = get_regular_blast_sequence(BlastSeqTable,PPV,R)
+function [UT,VT,AT,t] = bluid_blast_sequence(BlastSeqTable,PPV,R)
 %% ========================================================================
 % Copyright SRK/FIUBA (C) 2018
 % Coded By: P. Barbieri (pbarbieri@fi.uba.ar)

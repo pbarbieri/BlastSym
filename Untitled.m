@@ -1,28 +1,72 @@
+%% ATTENUATION MODEL
+a  = -1.6863;
+b = 6.2693;
+muLnPPV = @(r)a*log(r)+b;
+sigmaLnPPV = @(r) 0.4880;
+AttModel.muLnPPV = muLnPPV;
+AttModel.sigmaLnPPV = sigmaLnPPV;
 
-clc
-clear all
-Ka = 0.2; % Acceleration amplification factor
-f = 30; % Expected frequency
-K = 2094/1000; % Parameter of attenuation law
-N = 1.686;  % Parameter of attenuation law
+%% SITE CHARACTERISTICS
+% Pressure wave veloity
+Site.Cp = 4000; %[m/s]
+% Shear wave velocity
+Site.Cs = 2500; %[m/s]
+% Poisson coeficient
+Site.nu = 0.2;
+% Rayleigh wave veloicty
 
-W = @(D,ky) (D./(((ky*9.81)./(2*pi*f*Ka*K)).^(1/-N))).^2;
+%% SEED GENERATOR CHARACTERISTICS
 
-D = linspace(0,300,301).';
+% Seed function
+SeedGen.fun = 'sine'; % 'gauss' %'file'
+% Generator mode
+SeedGen.mode = 'single wave'; % 'psr'
+% Generator
+SeedGen.ND = '2D'; % '1D'
 
-close all
-hfig = figure(1);
-set(hfig,'color',[1 1 1],'Position',[40 40 800 500]);
-hplot = gobjects(4,1);
-hold on
-hplot(1) = plot(D,W(D,0.12),'-b','linewidth',2);
-hplot(2) = plot(D,W(D,0.019),'-r','linewidth',2);
-hplot(3) = plot(D,W(D,0.43),'-k','linewidth',2);
-hplot(4) = plot(D,W(D,0.45),'-k','linewidth',2);
-hold off
-grid on
-xlabel('Distance [m]','fontsize',12);
-ylabel('Maximum charge weight [kg]','fontsize',12);
-legend(hplot,{'Previous study(ky=0.12 K 95%)','Mining road(ky=0.019 K 95%)'...
-             ,'Raise (ky=0.43 K 95%)','Global wedge(ky=0.45 K 95%)'}...
-    ,'location','northwest','fontsize',12);
+% P-wave main frequency
+SeedGen.fp = 800; % [Hz]
+% P-wave damping
+SeedGen.xip = 0.25; % []
+% P-wave energy participation
+SeedGen.Ep = 0.5; % [% over the total energy transmited by the ground in a single explotion]
+
+% S-wave main frequency
+SeedGen.fs = 600; % [Hz]
+% S-wave damping
+SeedGen.xis = 0.15; % []
+% S-wave energy participation
+SeedGen.Es = 28; % [% over the total energy transmited by the ground in a single explotion]
+
+% R-wave main frequency
+SeedGen.fr = 400; % [Hz]
+% R-wave damping
+SeedGen.xir = 0.1; % []
+% R-wave energy participation
+SeedGen.Er = 67; % [% over the total energy transmited by the ground in a single explotion]
+
+%% BLASTING MODEL
+% Blast sequence
+BlastModel.SequenceFile = 'SEQ02.xlsx';
+% Site Coordiantes
+BlastModel.SiteX = 48.2;
+BlastModel.SiteY = -145;
+% Delay standard deviation 
+BlastModel.SigmaDelay = 2; %[ms]
+% Ratio of chaos in the signal
+BlastModel.R = 0.8;
+% Screening flag
+BlastModel.Sflag = 0;
+% Screening function
+BlastModel.Sfun = @(Ns,D) 1/(1+23337*sqrt(Ns)/D^2);
+
+%% RUN
+Run.ID = '';
+% Output folder
+Run.OutPutFolder = '';
+% plotting flag
+Run.Plot = 1;
+% Number of simulations
+Run.Nsim = 100;
+% Run
+main_r2(Run,AttModel,Site,SeedGen,BlastModel);

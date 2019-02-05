@@ -51,28 +51,27 @@ clc
 save([OutputFileName,'.mat'],'BlastSeqTable','UT','VT','AT','t');
 write_csv_output(AT,t,OutputFileName);
 
-% % Plots
-% close all
-% hfig = figure(1);
-% set(hfig,'Color',[1 1 1],'Position',[50,50,470*1.5,400*1.5]);
-% hold on
-% scatter(BlastSeqTable.X,BlastSeqTable.Y,'ok','filled');
-% scatter([SiteX,SiteX],[SiteY,SiteY],'^r','filled');
-% hold off
-% grid on
-% legend({'Blast Holes','Site'},'location','southwest','FontSize',12);
-% xlabel('X [m]','FontSize',12);
-% ylabel('Y [m]','FontSize',12);
-% 
-% hfig = figure(2);
-% set(hfig,'Color',[1 1 1],'Position',[100,100,1000,300]);
-% plot(t,UT)
-% grid on
-% xlabel('t [s]');
-% ylabel('U [m]');
-% set(gca,'Position',[0.07,0.14,0.85,0.8]);
-% 
-hfig = figure(3);
+% Plots
+close all
+hfig = figure(1);
+set(hfig,'Color',[1 1 1],'Position',[50,50,470*1.5,400*1.5]);
+hold on
+scatter(BlastSeqTable.X,BlastSeqTable.Y,'ok','filled');
+scatter([SiteX,SiteX],[SiteY,SiteY],'^r','filled');
+hold off
+grid on
+legend({'Blast Holes','Site'},'location','southwest','FontSize',12);
+xlabel('X [m]','FontSize',12);
+ylabel('Y [m]','FontSize',12);
+
+hfig = figure(2);
+set(hfig,'Color',[1 1 1],'Position',[100,100,1000,300]);
+plot(t,UT)
+grid on
+xlabel('t [s]');
+ylabel('U [m]');
+set(gca,'Position',[0.07,0.14,0.85,0.8]);
+% hfig = figure(3);
 set(hfig,'Color',[1 1 1],'Position',[150,150,1000,300]);
 plot(t,VT)
 grid on
@@ -87,6 +86,7 @@ grid on
 xlabel('t [s]');
 ylabel('A [m/s/s]');
 set(gca,'Position',[0.07,0.14,0.85,0.8]);
+
 
 
 
