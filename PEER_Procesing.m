@@ -1,4 +1,3 @@
-
 function [AT,VT,UT] = PEER_Procesing(AT,t,hpf)
 % PEER PROCESSING OF ACELERATION TIMESERIE(s) TO OBTAIN VELOCITY AND
 % DISPLACEMENTS
@@ -13,6 +12,51 @@ dt = t(2)-t(1);
 [AT] = Filter_AT(AT,t,HPFilterObj,LPFilterObj);
 % Baseline correction
 [AT,VT,UT] = BaselineCorrection(AT,t);
+end
+
+function [HPFilterObj,LPFilterObj] = Build_Filters(dt,hpf)
+% BUILDS FILTERS FOR RECORD PROCESSING
+%   dt: Time step of the record
+%   HPFilterObj: High-pass filter object
+%   LPFilter: : Low-pass filter object
+
+HPFilterObj = designfilt('highpassiir', 'FilterOrder', 6, ...
+                 'HalfPowerFrequency',hpf, 'SampleRate',1/dt, ...
+                 'DesignMethod', 'butter');
+LPFilterObj = 1;
+% if 1/(2*dt)<1000
+%     lpf = 1/(2*dt);
+% else
+%     lpf = 1000;
+% end
+% LPFilterObj =  designfilt('lowpassiir', 'PassbandFrequency', lpf-5, ...
+%             'StopbandFrequency', lpf, 'PassbandRipple', 1, ...
+%             'StopbandAttenuation', lpf-10, 'SampleRate', 1/dt, 'MatchExactly', 'passband');
+end
+
+function [AT] = Filter_AT(AT,t,HPFilterObj,LPFilterObj)
+% FILTER OF ACELERATION TIMESERIE(s)
+%   AT: Timeseries of record(s) by column.
+%   t:  Time vector by column.
+%   HPFilterObj: High-pass filter object
+%   LPFilter: : Low-pass filter object
+
+NP =  size(AT,1);
+dt = t(2) - t(1);
+fhp = HPFilterObj.HalfPowerFrequency;
+nfilt = HPFilterObj.FilterOrder;
+% Padding 
+NPad = ceil(1.5/2*nfilt/fhp*1/dt);
+AT(NPad+1:NPad+NP,:) = AT(:,:);
+AT(1:NPad,:) = 0;
+AT(NPad+NP+1:2*NPad+NP,:) = 0;
+% Filtering
+for c = 1:size(AT,2)
+    AT(:,c) = filtfilt(HPFilterObj,AT(:,c));
+%     AT(:,c) = filtfilt(LPFilterObj,AT(:,c));
+end
+% Unpaddig
+AT = AT(NPad+1:NPad+NP);
 end
 
 function [AT,VT,UT] = BaselineCorrection(AT,t)
@@ -72,23 +116,4 @@ for j = 1:N
         p(j) = a(k);
     end
 end
-end
-
-function [HPFilterObj,LPFilterObj] = Build_Filters(dt,hpf)
-% BUILDS FILTERS FOR RECORD PROCESSING
-%   dt: Time step of the record
-%   HPFilterObj: High-pass filter object
-%   LPFilter: : Low-pass filter object
-
-HPFilterObj = designfilt('highpassiir', 'FilterOrder', 6, ...
-                 'HalfPowerFrequency',hpf, 'SampleRate',1/dt, ...
-                 'DesignMethod', 'butter');
-if 1/(2*dt)<50
-    lpf = 1/(2*dt);
-else
-    lpf = 50;
-end
-LPFilterObj =  designfilt('lowpassiir', 'PassbandFrequency', lpf-5, ...
-            'StopbandFrequency', lpf, 'PassbandRipple', 1, ...
-            'StopbandAttenuation', lpf-10, 'SampleRate', 1/dt, 'MatchExactly', 'passband');
 end

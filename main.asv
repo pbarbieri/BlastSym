@@ -362,8 +362,8 @@ RMSA = zeros(Nsim,1);
 RMSV = zeros(Nsim,1);
 RMSD = zeros(Nsim,1);
 ky = logspace(-3,1,20);
-Newmark1 = zeros(Nsim,20);
-Newmark2 = zeros(Nsim,20);
+New1 = zeros(Nsim,20);
+New1 = zeros(Nsim,20);
 fprintf(1,'\t> Simulation of %i 1D %s records with %s seed.\n',Nsim,Mode,GenFun);
 for s = 1:Nsim
     fprintf(1,'\t\t- Building record %i of %i.\n',s,Nsim);
@@ -401,8 +401,6 @@ for s = 1:Nsim
     RMSA(s) = IM.RMSA;
     RMSV(s) = IM.RMSV;
     RMSD(s) = IM.RMSD;
-    Newmark1(s,:) = IM.Newmark1;
-    Newmark2(s,:) = IM.Newmark2;
     FileName = fullfile(OutputFoler,[RCID(s,:),'.mat']);
     save(FileName,'AT','VT','UT','t');  
 end
@@ -417,9 +415,6 @@ RCTable.IA = IA;
 RCTable.RMSA = RMSA;
 RCTable.RMSV = RMSV;
 RCTable.RMSD = RMSD;
-RCTable.ky = repmat(ky,Nsim,1);
-RCTable.Newmark1 = Newmark1;
-RCTable.Newmark2 = Newmark2;
 
 end
 
@@ -480,9 +475,6 @@ IAx = zeros(Nsim,1);
 RMSAx = zeros(Nsim,1);
 RMSVx = zeros(Nsim,1);
 RMSDx = zeros(Nsim,1);
-ky = logspace(-3,1,20);
-Newmark1x = zeros(Nsim,20);
-Newmark2x = zeros(Nsim,20);
 PGAy = zeros(Nsim,1);
 PGVy = zeros(Nsim,1);
 PGDy = zeros(Nsim,1);
@@ -490,8 +482,6 @@ IAy = zeros(Nsim,1);
 RMSAy = zeros(Nsim,1);
 RMSVy = zeros(Nsim,1);
 RMSDy = zeros(Nsim,1);
-Newmark1y = zeros(Nsim,20);
-Newmark2y = zeros(Nsim,20);
 fprintf(1,'\t> Simulation of %i 1D %s records with %s seed.\n',Nsim,Mode,GenFun);
 for s = 1:Nsim
     fprintf(1,'\t\t- Building record %i of %i.\n',s,Nsim);
@@ -534,8 +524,8 @@ for s = 1:Nsim
     UTy(NPo) = UTy(NPo-1)+(1-1/2)*dt*VTy(NPo-1)+1/2*dt*VTy(NPo);
     
     % Intensity measures
-    [IMx] = Get_IM(t,ATx,VTx,UTx,ky);
-    [IMy] = Get_IM(t,ATy,VTy,UTy,ky);
+    [IMx] = Get_IM(t,ATx,VTx,UTx);
+    [IMy] = Get_IM(t,ATy,VTy,UTy);
     PGAx(s) = IMx.PGA;
     PGVx(s) = IMx.PGV;
     PGDx(s) = IMx.PGD;
@@ -543,17 +533,13 @@ for s = 1:Nsim
     RMSAx(s) = IMx.RMSA;
     RMSVx(s) = IMx.RMSV;
     RMSDx(s) = IMx.RMSD;
-    Newmark1x(s,:) = IMx.Newmark1;
-    Newmark2x(s,:) = IMx.Newmark2;
     PGAy(s) = IMy.PGA;
     PGVy(s) = IMy.PGV;
     PGDy(s) = IMy.PGD;
     IAy(s) = IMy.IA;
     RMSAy(s) = IMy.RMSA;
     RMSVy(s) = IMy.RMSV;
-    RMSDy(s) = IMy.RMSD;  
-    Newmark1y(s,:) = IMy.Newmark1;
-    Newmark2y(s,:) = IMy.Newmark2;
+    RMSDy(s) = IMy.RMSD;    
     FileName = fullfile(OutputFoler,[RCID(s,:),'.mat']);
     save(FileName,'ATx','VTx','UTx','ATy','VTy','UTy','t');  
 end
@@ -575,11 +561,6 @@ RCTable.IAy = IAy;
 RCTable.RMSAy = RMSAy;
 RCTable.RMSVy = RMSVy;
 RCTable.RMSDy = RMSDy;
-RCTable.ky = repmat(ky,Nsim,1);
-RCTable.Newmark1x = Newmark1x;
-RCTable.Newmark2x = Newmark2x;
-RCTable.Newmark1y = Newmark1y;
-RCTable.Newmark2y = Newmark2y;
 end
 
 function [IM] = Get_IM(t,AT,VT,UT,ky)
