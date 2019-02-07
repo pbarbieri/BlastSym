@@ -26,13 +26,13 @@ Site.nu.sigma = 0.01; %[ ] 0 for constant value = mean
 % Seed function
 SeedGen.fun = 'sin'; %'sin' 'blair' %'gauss' %'file'
 % Generator mode
-SeedGen.mode = 'psr'; % 'psr' %p' %s' %r'
+SeedGen.mode = 'p'; % 'psr' %p' %s' %r'
 % Generator
-SeedGen.ND = '2D'; % '1D' '2D'
+SeedGen.ND = '1D'; % '1D' '2D'
 
 % P-wave main frequency
-SeedGen.fp.mu = 800; % [Hz]
-SeedGen.fp.sigma = 20; % [Hz] 0 for constant value = mean
+SeedGen.fp.mu =  40; % [Hz]
+SeedGen.fp.sigma = 0; % [Hz] 0 for constant value = mean
 % P-wave damping
 SeedGen.xip.mu = .6; % [ ]
 SeedGen.xip.sigma = 0.05; % [ ] 0 for constant value = mean
@@ -78,10 +78,12 @@ BlastModel.GSF = 0; % 0 or ~=0. if GSF=0 no global PPV scaling is applied
 %% RUN
 Run.ID = 'Solomon TSF1';
 % Output folder
-Run.OutPutFolder = 'C:\Users\pbarbieri\Documents\GitHub\BlastSym\Test';
+Run.OutPutFolder = 'C:\Users\pbarbieri\Documents\GitHub\BlastSym\Test sin';
+% Number of simulations
+Run.Nsim = 5;
+% Export to slide flag
+Run.ETS = 1;
 % plotting flag
 Run.Plot = 1;
-% Number of simulations
-Run.Nsim = 40;
 % Run
 [RCTable,BlastSeqTable] = main(Run,AttModel,Site,SeedGen,BlastModel);

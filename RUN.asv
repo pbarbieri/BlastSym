@@ -24,18 +24,18 @@ Site.nu.sigma = 0.01; %[ ] 0 for constant value = mean
 %% SEED GENERATOR CHARACTERISTICS
 
 % Seed function
-SeedGen.fun = 'blair'; %'sin' 'blair' %'gauss' %'file'
+SeedGen.fun = 'sin'; %'sin' 'blair' %'gauss' %'file'
 % Generator mode
 SeedGen.mode = 'p'; % 'psr' %p' %s' %r'
 % Generator
-SeedGen.ND = '1D'; % '1D' '2D'
+SeedGen.ND = '2D'; % '1D' '2D'
 
 % P-wave main frequency
-SeedGen.fp.mu = 100; % [Hz]
+SeedGen.fp.mu =  40; % [Hz]
 SeedGen.fp.sigma = 0; % [Hz] 0 for constant value = mean
 % P-wave damping
-SeedGen.xip.mu = 1.5; % [ ]
-SeedGen.xip.sigma = 0.2; % [ ] 0 for constant value = mean
+SeedGen.xip.mu = .6; % [ ]
+SeedGen.xip.sigma = 0.05; % [ ] 0 for constant value = mean
 % P-wave energy participation
 SeedGen.Ep = 0.05; % [% over the total energy transmited by the ground in a single explotion]
 
@@ -43,8 +43,8 @@ SeedGen.Ep = 0.05; % [% over the total energy transmited by the ground in a sing
 SeedGen.fs.mu = 600; % [Hz]
 SeedGen.fs.sigma = 20; % [Hz] 0 for constant value = mean
 % S-wave damping
-SeedGen.xis.mu = 1; % [ ]
-SeedGen.xis.sigma = 0.03; % [ ] 0 for constant value = mean
+SeedGen.xis.mu = .4; % [ ]
+SeedGen.xis.sigma = 0.05; % [ ] 0 for constant value = mean
 % S-wave energy participation
 SeedGen.Es = 0.28; % [% over the total energy transmited by the ground in a single explotion]
 
@@ -78,10 +78,12 @@ BlastModel.GSF = 0; % 0 or ~=0. if GSF=0 no global PPV scaling is applied
 %% RUN
 Run.ID = 'Solomon TSF1';
 % Output folder
-Run.OutPutFolder = 'C:\Users\pbarbieri\Documents\GitHub\BlastSym\Test';
+Run.OutPutFolder = 'C:\Users\pbarbieri\Documents\GitHub\BlastSym\Test sin';
 % plotting flag
 Run.Plot = 1;
 % Number of simulations
-Run.Nsim = 2;
+Run.Nsim = 5;
+% Export to slide flag
+Run.ETS = 1;
 % Run
 [RCTable,BlastSeqTable] = main(Run,AttModel,Site,SeedGen,BlastModel);

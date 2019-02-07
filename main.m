@@ -52,9 +52,9 @@ fprintf(1,'\t> Simulation of properties for %i scenarios. \n',Run.Nsim);
 
 % Build blast sequence
 if strcmpi(SeedGen.ND,'1D')
-    [RCTable] = build_1D_sequence(BlastSeqTable,RCTable,OutPutFolder,SeedGen.mode,SeedGen.fun,BlastModel.GSF);
+    [RCTable] = build_1D_sequence(BlastSeqTable,RCTable,OutPutFolder,SeedGen.mode,SeedGen.fun,BlastModel.GSF,Run.ETS);
 elseif strcmpi(SeedGen.ND,'2D')
-    [RCTable] = build_2D_sequence(BlastSeqTable,RCTable,OutPutFolder,SeedGen.mode,SeedGen.fun,BlastModel.GSF);
+    [RCTable] = build_2D_sequence(BlastSeqTable,RCTable,OutPutFolder,SeedGen.mode,SeedGen.fun,BlastModel.GSF,Run.ETS);
 else
     keyboard;
 end
@@ -312,7 +312,7 @@ end
 
 end
 
-function [RCTable] = build_1D_sequence(BlastSeqTable,RCTable,OutputFoler,Mode,GenFun,GSF)
+function [RCTable] = build_1D_sequence(BlastSeqTable,RCTable,OutputFoler,Mode,GenFun,GSF,ETS)
 
 % Flag for wave types
 PFlag = 1;
@@ -404,7 +404,11 @@ for s = 1:Nsim
     Newmark1(s,:) = IM.Newmark1;
     Newmark2(s,:) = IM.Newmark2;
     FileName = fullfile(OutputFoler,[RCID(s,:),'.mat']);
-    save(FileName,'AT','VT','UT','t');  
+    save(FileName,'AT','VT','UT','t');
+    if ETS
+        FileName = fullfile(OutputFoler,[RCID(s,:),'.txt']);
+        export2slide(t,AT,FileName);
+    end
 end
 % Save IM in RCTable
 RCTable.NP =  ones(Nsim,1)*NPo;
@@ -423,7 +427,7 @@ RCTable.Newmark2 = Newmark2;
 
 end
 
-function [RCTable] = build_2D_sequence(BlastSeqTable,RCTable,OutputFoler,Mode,GenFun,GSF)
+function [RCTable] = build_2D_sequence(BlastSeqTable,RCTable,OutputFoler,Mode,GenFun,GSF,ETS)
 % Flag for wave types
 PFlag = 1;
 SFlag = 1;
@@ -555,7 +559,13 @@ for s = 1:Nsim
     Newmark1y(s,:) = IMy.Newmark1;
     Newmark2y(s,:) = IMy.Newmark2;
     FileName = fullfile(OutputFoler,[RCID(s,:),'.mat']);
-    save(FileName,'ATx','VTx','UTx','ATy','VTy','UTy','t');  
+    save(FileName,'ATx','VTx','UTx','ATy','VTy','UTy','t');
+    if ETS
+        FileName = fullfile(OutputFoler,[RCID(s,:),'_x.txt']);
+        export2slide(t,ATx,FileName);
+        FileName = fullfile(OutputFoler,[RCID(s,:),'_y.txt']);
+        export2slide(t,ATx,FileName);
+    end
 end
 % Save IM in RCTable
 RCTable.NP =  ones(Nsim,1)*NPo;
@@ -610,6 +620,28 @@ IM.RMSV = sqrt(dot(VT,VT)/NP);
 
 IM.PGD = max(abs(UT));
 IM.RMSD = sqrt(dot(UT,UT)/NP);
+
+end
+
+function [] = export2slide(t,AT,OutputFileName)
+idx = find(round(AT,5)~=0,1);
+if idx>1
+    AT = AT(idx-1:end);
+    t = t(1:numel(AT));
+end
+NP = size(AT,1);
+AT(1) = 0;
+AT = AT/9.81; %m/s2 2 g
+% slide only reads 6 digits, negative accelerations <10^-6 results in a
+% -0.00000 which crashes Slide.
+AT(round(AT,6)==0) = 0; 
+
+FileName = [OutputFileName,'.txt'];
+fiad = fopen(FileName,'w');
+for k = 1:NP
+    fprintf(fiad,'%f\t%f\n',t(k),AT(k));
+end
+fclose(fiad);
 
 end
 
