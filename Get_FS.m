@@ -12,6 +12,4 @@ NUP = NFFT/2+1;
 f = 1/(2*dt)*linspace(0,1,NUP).';
 AF = fft(AT,NFFT,1);
 AF = AF(1:NUP,:);
-
-AF2 = pdf(makedist('normal',10,2),f).*exp(-1i*2*pi*f*3);
 end
