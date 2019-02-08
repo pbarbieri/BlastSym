@@ -28,14 +28,14 @@ SeedGen.fun = 'sin'; %'sin' 'blair' %'gauss' %'file'
 % Generator mode
 SeedGen.mode = 'p'; % 'psr' %p' %s' %r'
 % Generator
-SeedGen.ND = '2D'; % '1D' '2D'
+SeedGen.ND = '1D'; % '1D' '2D'
 
 % P-wave main frequency
-SeedGen.fp.mu =  40; % [Hz]
+SeedGen.fp.mu =  800; % [Hz]
 SeedGen.fp.sigma = 0; % [Hz] 0 for constant value = mean
 % P-wave damping
 SeedGen.xip.mu = .6; % [ ]
-SeedGen.xip.sigma = 0.05; % [ ] 0 for constant value = mean
+SeedGen.xip.sigma = 0; % [ ] 0 for constant value = mean
 % P-wave energy participation
 SeedGen.Ep = 0.05; % [% over the total energy transmited by the ground in a single explotion]
 
@@ -73,17 +73,46 @@ BlastModel.Sflag = 1;
 % Screening function
 BlastModel.Sfun = @(Ns,D) 1/(1+23337*sqrt(Ns)/D^2);
 % Global Scale Factor
-BlastModel.GSF = 0; % 0 or ~=0. if GSF=0 no global PPV scaling is applied
+BlastModel.GSF = 0; % [mm/s] 0 or ~=0. if GSF=0 no global PPV scaling is applied
+
+
+
 
 %% RUN
-Run.ID = 'Solomon TSF1';
-% Output folder
-Run.OutPutFolder = 'C:\Users\pbarbieri\Documents\GitHub\BlastSym\Test sin';
-% plotting flag
-Run.Plot = 1;
-% Number of simulations
-Run.Nsim = 5;
-% Export to slide flag
-Run.ETS = 1;
-% Run
-[RCTable,BlastSeqTable] = main(Run,AttModel,Site,SeedGen,BlastModel);
+PPV = [1 2 3 4 5 10 15 20 25 30 40 50 60 70 80 90 100 125 150 175 200 225 250 275 300 325 350];
+NPPV = numel(PPV);
+for j = 1:NPPV
+    Run.ID = ['Solomon TSF1 PPV ',num2str(PPV(j)),' sin'];
+    BlastModel.GSF = PPV(j); % [mm/s] 0 or ~=0. if GSF=0 no global PPV scaling is applied
+    % Seed function
+    SeedGen.fun = 'sin';
+    % Output folder
+    Run.OutPutFolder = fullfile(pwd,Run.ID);
+    % Number of simulations
+    Run.Nsim = 10;
+    % Export to slide flag
+    Run.ETS = 1;
+    % plotting flag
+    Run.Plot = 1;
+    % Run
+    [~,~] = main(Run,AttModel,Site,SeedGen,BlastModel);
+end
+for j = 1:NPPV
+    Run.ID = ['Solomon TSF1 PPV ',num2str(PPV(j)),' blair'];
+    BlastModel.GSF = PPV(j); % [mm/s] 0 or ~=0. if GSF=0 no global PPV scaling is applied
+    % Seed function
+    SeedGen.fun = 'blair';
+    % Output folder
+    Run.OutPutFolder = fullfile(pwd,Run.ID);
+    % Number of simulations
+    Run.Nsim = 10;
+    % Export to slide flag
+    Run.ETS = 1;
+    % plotting flag
+    Run.Plot = 1;
+    % Run
+    [~,~] = main(Run,AttModel,Site,SeedGen,BlastModel);
+end
+
+
+
