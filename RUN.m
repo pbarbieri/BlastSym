@@ -31,7 +31,7 @@ SeedGen.mode = 'p'; % 'psr' %p' %s' %r'
 SeedGen.ND = '1D'; % '1D' '2D'
 
 % P-wave main frequency
-SeedGen.fp.mu =  40; % [Hz]
+SeedGen.fp.mu =  800; % [Hz]
 SeedGen.fp.sigma = 0; % [Hz] 0 for constant value = mean
 % P-wave damping
 SeedGen.xip.mu = .6; % [ ]
@@ -73,17 +73,19 @@ BlastModel.Sflag = 1;
 % Screening function
 BlastModel.Sfun = @(Ns,D) 1/(1+23337*sqrt(Ns)/D^2);
 % Global Scale Factor
-BlastModel.GSF = 0; % 0 or ~=0. if GSF=0 no global PPV scaling is applied
+BlastModel.GSF = 0; % [mm/s] 0 or ~=0. if GSF=0 no global PPV scaling is applied
 
 %% RUN
-Run.ID = 'Solomon TSF1';
+Run.ID = 'TEST';
+BlastModel.GSF = 5; % 0 or ~=0. if GSF=0 no global PPV scaling is applied
 % Output folder
-Run.OutPutFolder = 'C:\Users\pbarbieri\Documents\GitHub\BlastSym\Test sin';
+Run.OutPutFolder = 'C:\Users\pbarbieri\Documents\GitHub\BlastSym\Test';
 % Number of simulations
-Run.Nsim = 5;
+Run.Nsim = 10;
 % Export to slide flag
 Run.ETS = 1;
 % plotting flag
 Run.Plot = 1;
 % Run
 [RCTable,BlastSeqTable] = main(Run,AttModel,Site,SeedGen,BlastModel);
+

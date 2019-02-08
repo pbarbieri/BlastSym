@@ -385,7 +385,7 @@ for s = 1:Nsim
         VT(:,k) = PVV(k,s)*VT(:,k)/max(abs(VT(:,k)));
     end
     VT = sum(VT,2);
-    if GSF~=0, VT = GSF/max(abs(VT))*VT;  end
+    if GSF~=0, VT = GSF/(1000*max(abs(VT)))*VT;  end
     for k = 2:NPo-1
         AT(k) = (VT(k+1)-VT(k-1))/(2*dt);
         UT(k) = UT(k-1)+(1-1/2)*dt*VT(k-1)+1/2*dt*VT(k);
@@ -523,8 +523,8 @@ for s = 1:Nsim
     VTx = sum(Rx.*VTlong+Tx.*VTtrans,2);
     VTy = sum(Ry.*VTlong+Ty.*VTtrans,2);
     if GSF~=0
-        VTx = GSF/max(abs(VTx))*VTx;
-        VTy = GSF/max(abs(VTy))*VTy;
+        VTx = GSF/(1000*max(abs(VTx)))*VTx;
+        VTy = GSF/(1000*max(abs(VTy)))*VTy;
     end
     for k = 2:NPo-1
         ATx(k) = (VTx(k+1)-VTx(k-1))/(2*dt);
@@ -592,9 +592,9 @@ RCTable.Newmark1y = Newmark1y;
 RCTable.Newmark2y = Newmark2y;
 end
 
-function [IM] = Get_IM(t,AT,VT,UT,ky)
+function [IM] = Get_IM(t,AT,VT,UT,ac)
 g = 9.81;
-NKy = numel(ky);
+NKy = numel(ac);
 Newmark1 = zeros(NKy,1);
 Newmark2 = zeros(NKy,1);
 NP = numel(AT);
@@ -603,12 +603,12 @@ dt = t(2)-t(1);
 IM.PGA = max(abs(AT));
 IM.RMSA = sqrt(dot(AT,AT)/NP);
 IM.IA = pi/2*g*dot(AT,AT)*dt;
-IM.ky = ky;
+IM.ky = ac;
 for k = 1:NKy
-    AT1 = AT; AT1(AT<ky(k)) = 0;
-    AT2 = AT; AT2(AT>-ky(k)) = 0;
-    [UT1,~] = Get_VUT(AT1,t);
-    [UT2,~] = Get_VUT(AT2,t);
+    AT1 = AT-ac(k); AT1(AT<ac(k)) = 0;
+    AT2 = AT+ac(k); AT2(AT>-ac(k)) = 0;
+    [UT1,~] = Get_NVUT(AT1,t,ac(k));
+    [UT2,~] = Get_NVUT(AT2,t,ac(k));
     Newmark1(k) = UT1(end);
     Newmark2(k) = UT2(end);
 end
@@ -645,3 +645,43 @@ fclose(fiad);
 
 end
 
+function [VT,UT,t] = Get_NVUT(AT,t,ac)
+% NEWMARK INTEGRATION OF ACELERATION TIMESERIE(s) FOR SLINDING BLOCK WITH
+% CRICITAL ACCELERATION
+%   AT: Acceleration timeseries of record(s) by column.
+%   t:  Time vector by column.
+%   VT: Velocity timeseries of record(s) by column.
+%   UT: Displacement timeseries of record(s) by column.
+%   ac: Critical acceleration
+
+% Default Newmark integration Parameters
+gamma = 1/2;
+beta = 1/4;
+
+AT = abs(AT);
+
+NP = size(AT,1);
+dt = t(2) - t(1);
+VT = zeros(NP,size(AT,2));
+UT = VT;
+for j = 2:NP
+    if AT(j)>0
+        VT(j,:) = VT(j-1,:)+(1-gamma)*dt*AT(j-1,:)+gamma*dt*AT(j,:);
+        UT(j,:) = UT(j-1,:)+dt*VT(j-1,:)+(1/2-beta)*dt^2*AT(j-1,:)+beta*dt^2*AT(j,:);
+    else
+        VT(j,:) = VT(j-1,:)+(1-gamma)*dt*(-ac)+gamma*dt*(-ac);
+        if VT(j,:)<0, VT(j,:) = 0;  end
+        UT(j,:) = UT(j-1,:)+dt*VT(j-1,:)+(1/2-beta)*dt^2*(-ac)+beta*dt^2*(-ac);
+    end
+    
+end
+j = NP;
+while VT(j,:)>0
+    j = j+1;
+    VT(j,:) = VT(j-1,:)+(1-gamma)*dt*(-ac)+gamma*dt*(-ac);
+    if VT(j,:)<0, VT(j,:) = 0;  end
+    UT(j,:) = UT(j-1,:)+dt*VT(j-1,:)+(1/2-beta)*dt^2*(-ac)+beta*dt^2*(-ac);
+    t(j) = t(j-1) + dt;
+end
+
+end
