@@ -12,13 +12,13 @@ AttModel.sigmaLnPPV = sigmaLnPPV;
 %% SITE CHARACTERISTICS
 % Pressure wave veloity
 Site.Cp.mu = 4000; %[m/s]
-Site.Cp.sigma = 100; %[m/s] 0 for constant value = mean
+Site.Cp.sigma = 0; %[m/s] 0 for constant value = mean
 % Shear wave velocity
 Site.Cs.mu = 2500; %[m/s]
-Site.Cs.sigma = 100; %[m/s] 0 for constant value = mean
+Site.Cs.sigma = 0; %[m/s] 0 for constant value = mean
 % Poisson coeficient
 Site.nu.mu = 0.2;
-Site.nu.sigma = 0.01; %[ ] 0 for constant value = mean
+Site.nu.sigma = 0; %[ ] 0 for constant value = mean
 % Rayleigh wave veloicty
 
 %% SEED GENERATOR CHARACTERISTICS
@@ -26,7 +26,7 @@ Site.nu.sigma = 0.01; %[ ] 0 for constant value = mean
 % Seed function
 SeedGen.fun = 'sin'; %'sin' 'blair' %'gauss' %'file'
 % Generator mode
-SeedGen.mode = 'p'; % 'psr' %p' %s' %r'
+SeedGen.mode = 's'; % 'psr' %p' %s' %r'
 % Generator
 SeedGen.ND = '1D'; % '1D' '2D'
 
@@ -34,17 +34,17 @@ SeedGen.ND = '1D'; % '1D' '2D'
 SeedGen.fp.mu =  800; % [Hz]
 SeedGen.fp.sigma = 0; % [Hz] 0 for constant value = mean
 % P-wave damping
-SeedGen.xip.mu = .6; % [ ]
+SeedGen.xip.mu = 800; % [ ]
 SeedGen.xip.sigma = 0.05; % [ ] 0 for constant value = mean
 % P-wave energy participation
 SeedGen.Ep = 0.05; % [% over the total energy transmited by the ground in a single explotion]
 
 % S-wave main frequency
-SeedGen.fs.mu = 600; % [Hz]
-SeedGen.fs.sigma = 20; % [Hz] 0 for constant value = mean
+SeedGen.fs.mu = 20; % [Hz]
+SeedGen.fs.sigma = 0; % [Hz] 0 for constant value = mean
 % S-wave damping
-SeedGen.xis.mu = .4; % [ ]
-SeedGen.xis.sigma = 0.05; % [ ] 0 for constant value = mean
+SeedGen.xis.mu = .6; % [ ]
+SeedGen.xis.sigma = 0; % [ ] 0 for constant value = mean
 % S-wave energy participation
 SeedGen.Es = 0.28; % [% over the total energy transmited by the ground in a single explotion]
 
@@ -59,29 +59,28 @@ SeedGen.Er = 0.67; % [% over the total energy transmited by the ground in a sing
 
 %% BLASTING MODEL
 % Blast sequence
-BlastModel.SequenceFile = 'SEQ02.xlsx';
+BlastModel.SequenceFile = 'TEST02.xlsx';
 % Site Coordiantes
-BlastModel.SiteX = 48.2;
-BlastModel.SiteY = -145;
+BlastModel.SiteX = 100;
+BlastModel.SiteY = 0;
 % Delay standard deviation 
 BlastModel.SigmaDelay = 2; %[ms]
 % Ratio of chaos in the signal
-BlastModel.R.mu = 0.8; % [ ]
-BlastModel.R.sigma = 0.05; % [ ] 0 for constant value = mean
+BlastModel.R.mu = 0; % [ ]
+BlastModel.R.sigma = 0; % [ ] 0 for constant value = mean
 % Screening flag
-BlastModel.Sflag = 1;
+BlastModel.Sflag = 0;
 % Screening function
 BlastModel.Sfun = @(Ns,D) 1/(1+23337*sqrt(Ns)/D^2);
 % Global Scale Factor
-BlastModel.GSF = 0; % [mm/s] 0 or ~=0. if GSF=0 no global PPV scaling is applied
+BlastModel.GSF = 30; % [mm/s] 0 or ~=0. if GSF=0 no global PPV scaling is applied
 
 %% RUN
-Run.ID = 'TEST';
-BlastModel.GSF = 5; % 0 or ~=0. if GSF=0 no global PPV scaling is applied
+Run.ID = 'TEST02';
 % Output folder
-Run.OutPutFolder = 'C:\Users\pbarbieri\Documents\GitHub\BlastSym\Test';
+Run.OutPutFolder = 'C:\Users\pbarbieri\Documents\GitHub\BlastSym\Test2';
 % Number of simulations
-Run.Nsim = 10;
+Run.Nsim = 1;
 % Export to slide flag
 Run.ETS = 1;
 % plotting flag

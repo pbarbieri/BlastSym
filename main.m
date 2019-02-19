@@ -239,7 +239,7 @@ if BlastModel.Sflag
                 Y_filtered = Yblast; Y_filtered = Y_filtered(T(:,s)<T(k,s));
                 % Remove blasts from same borehole
                 idx = and(X_filtered~=Xblast(k),Y_filtered~=Yblast(k));
-                if ~isempty(idx)
+            if ~isempty(idx)
                 X_filtered = X_filtered(idx);
                 Y_filtered = Y_filtered(idx);
                 % Screening polygon
@@ -304,7 +304,7 @@ switch lower(GenFun)
 
     case {'blair'}
         L = @(t) (sign(t)+1)/2;
-        Vpulse = @(t,to,fo,xi) exp(-max((t-to),0)*fo*10).*(((t-to)*fo*10).^6-12*((t-to)*fo*10).^5+30*((t-to)*fo*10).^4).*L((t-to));
+        Vpulse = @(t,to,fo,xi) exp(-max((t-to),0)*fo*10*xi).*(((t-to)*fo*10).^6-12*((t-to)*fo*10).^5+30*((t-to)*fo*10).^4).*L((t-to));
     otherwise
         keyboard;
 end 
@@ -361,7 +361,7 @@ IA = zeros(Nsim,1);
 RMSA = zeros(Nsim,1);
 RMSV = zeros(Nsim,1);
 RMSD = zeros(Nsim,1);
-ky = logspace(-3,1,20);
+ac = logspace(-3,1,20);
 Newmark1 = zeros(Nsim,20);
 Newmark2 = zeros(Nsim,20);
 fprintf(1,'\t> Simulation of %i 1D %s records with %s seed.\n',Nsim,Mode,GenFun);
@@ -393,7 +393,7 @@ for s = 1:Nsim
     AT(NPo) = (VT(end)-VT(end-1))/dt;
     UT(NPo) = UT(NPo-1)+(1-1/2)*dt*VT(NPo-1)+1/2*dt*VT(NPo);
     % Intensity measures
-    [IM] = Get_IM(t,AT,VT,UT,ky);
+    [IM] = Get_IM(t,AT,VT,UT,ac);
     PGA(s) = IM.PGA;
     PGV(s) = IM.PGV;
     PGD(s) = IM.PGD;
@@ -421,7 +421,7 @@ RCTable.IA = IA;
 RCTable.RMSA = RMSA;
 RCTable.RMSV = RMSV;
 RCTable.RMSD = RMSD;
-RCTable.ky = repmat(ky,Nsim,1);
+RCTable.ky = repmat(ac/9.81,Nsim,1);
 RCTable.Newmark1 = Newmark1;
 RCTable.Newmark2 = Newmark2;
 
@@ -484,7 +484,7 @@ IAx = zeros(Nsim,1);
 RMSAx = zeros(Nsim,1);
 RMSVx = zeros(Nsim,1);
 RMSDx = zeros(Nsim,1);
-ky = logspace(-3,1,20);
+ac = logspace(-3,1,20);
 Newmark1x = zeros(Nsim,20);
 Newmark2x = zeros(Nsim,20);
 PGAy = zeros(Nsim,1);
@@ -538,8 +538,8 @@ for s = 1:Nsim
     UTy(NPo) = UTy(NPo-1)+(1-1/2)*dt*VTy(NPo-1)+1/2*dt*VTy(NPo);
     
     % Intensity measures
-    [IMx] = Get_IM(t,ATx,VTx,UTx,ky);
-    [IMy] = Get_IM(t,ATy,VTy,UTy,ky);
+    [IMx] = Get_IM(t,ATx,VTx,UTx,ac);
+    [IMy] = Get_IM(t,ATy,VTy,UTy,ac);
     PGAx(s) = IMx.PGA;
     PGVx(s) = IMx.PGV;
     PGDx(s) = IMx.PGD;
@@ -585,7 +585,7 @@ RCTable.IAy = IAy;
 RCTable.RMSAy = RMSAy;
 RCTable.RMSVy = RMSVy;
 RCTable.RMSDy = RMSDy;
-RCTable.ky = repmat(ky,Nsim,1);
+RCTable.ky = repmat(ac/9.81,Nsim,1);
 RCTable.Newmark1x = Newmark1x;
 RCTable.Newmark2x = Newmark2x;
 RCTable.Newmark1y = Newmark1y;
@@ -603,12 +603,10 @@ dt = t(2)-t(1);
 IM.PGA = max(abs(AT));
 IM.RMSA = sqrt(dot(AT,AT)/NP);
 IM.IA = pi/2*g*dot(AT,AT)*dt;
-IM.ky = ac;
+IM.ky = ac/9.81;
 for k = 1:NKy
-    AT1 = AT-ac(k); AT1(AT<ac(k)) = 0;
-    AT2 = AT+ac(k); AT2(AT>-ac(k)) = 0;
-    [UT1,~] = Get_NVUT(AT1,t,ac(k));
-    [UT2,~] = Get_NVUT(AT2,t,ac(k));
+    [~,UT1] = Get_NVUT(3*AT,t,ac(k));
+    [~,UT2] = Get_NVUT(-3*AT,t,ac(k));
     Newmark1(k) = UT1(end);
     Newmark2(k) = UT2(end);
 end
@@ -658,30 +656,30 @@ function [VT,UT,t] = Get_NVUT(AT,t,ac)
 gamma = 1/2;
 beta = 1/4;
 
-AT = abs(AT);
-
 NP = size(AT,1);
 dt = t(2) - t(1);
-VT = zeros(NP,size(AT,2));
-UT = VT;
+VT = zeros(NP,1);
+UT = zeros(NP,1);
+ATblock = zeros(NP,1);
+
 for j = 2:NP
-    if AT(j)>0
-        VT(j,:) = VT(j-1,:)+(1-gamma)*dt*AT(j-1,:)+gamma*dt*AT(j,:);
-        UT(j,:) = UT(j-1,:)+dt*VT(j-1,:)+(1/2-beta)*dt^2*AT(j-1,:)+beta*dt^2*AT(j,:);
-    else
-        VT(j,:) = VT(j-1,:)+(1-gamma)*dt*(-ac)+gamma*dt*(-ac);
-        if VT(j,:)<0, VT(j,:) = 0;  end
-        UT(j,:) = UT(j-1,:)+dt*VT(j-1,:)+(1/2-beta)*dt^2*(-ac)+beta*dt^2*(-ac);
+    ATblock(j) = AT(j)-ac;
+    VT(j) = VT(j-1)+(1-gamma)*dt*ATblock(j-1)+gamma*dt*ATblock(j);
+    if VT(j)<0
+        VT(j) = 0; 
+        ATblock(j) = 0;
     end
-    
+    UT(j) = UT(j-1)+dt*VT(j-1)+(1/2-beta)*dt^2*ATblock(j-1)+beta*dt^2*ATblock(j);
+    if UT(j)<UT(j-1), UT(j)=UT(j-1); end
 end
-j = NP;
-while VT(j,:)>0
+j= NP;
+while VT(j)>0
     j = j+1;
-    VT(j,:) = VT(j-1,:)+(1-gamma)*dt*(-ac)+gamma*dt*(-ac);
-    if VT(j,:)<0, VT(j,:) = 0;  end
-    UT(j,:) = UT(j-1,:)+dt*VT(j-1,:)+(1/2-beta)*dt^2*(-ac)+beta*dt^2*(-ac);
+    VT(j) = VT(j-1)+(1-gamma)*dt*(-ac)+gamma*dt*(-ac);
+    if VT(j)<0, VT(j) = 0;  end
+    UT(j) = UT(j-1)+dt*VT(j-1)+(1/2-beta)*dt^2*(-ac)+beta*dt^2*(-ac);
     t(j) = t(j-1) + dt;
 end
+
 
 end

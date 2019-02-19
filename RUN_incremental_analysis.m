@@ -12,13 +12,13 @@ AttModel.sigmaLnPPV = sigmaLnPPV;
 %% SITE CHARACTERISTICS
 % Pressure wave veloity
 Site.Cp.mu = 4000; %[m/s]
-Site.Cp.sigma = 100; %[m/s] 0 for constant value = mean
+Site.Cp.sigma = 0; %[m/s] 0 for constant value = mean
 % Shear wave velocity
 Site.Cs.mu = 2500; %[m/s]
-Site.Cs.sigma = 100; %[m/s] 0 for constant value = mean
+Site.Cs.sigma = 0; %[m/s] 0 for constant value = mean
 % Poisson coeficient
-Site.nu.mu = 0.2;
-Site.nu.sigma = 0.01; %[ ] 0 for constant value = mean
+Site.nu.mu = 0.25;
+Site.nu.sigma = 0; %[ ] 0 for constant value = mean
 % Rayleigh wave veloicty
 
 %% SEED GENERATOR CHARACTERISTICS
@@ -26,25 +26,25 @@ Site.nu.sigma = 0.01; %[ ] 0 for constant value = mean
 % Seed function
 SeedGen.fun = 'sin'; %'sin' 'blair' %'gauss' %'file'
 % Generator mode
-SeedGen.mode = 'p'; % 'psr' %p' %s' %r'
+SeedGen.mode = 's'; % 'psr' %p' %s' %r'
 % Generator
 SeedGen.ND = '1D'; % '1D' '2D'
 
 % P-wave main frequency
-SeedGen.fp.mu =  800; % [Hz]
+SeedGen.fp.mu =  13; % [Hz]
 SeedGen.fp.sigma = 0; % [Hz] 0 for constant value = mean
 % P-wave damping
-SeedGen.xip.mu = .6; % [ ]
+SeedGen.xip.mu = .08; % [ ]
 SeedGen.xip.sigma = 0; % [ ] 0 for constant value = mean
 % P-wave energy participation
 SeedGen.Ep = 0.05; % [% over the total energy transmited by the ground in a single explotion]
 
 % S-wave main frequency
-SeedGen.fs.mu = 600; % [Hz]
-SeedGen.fs.sigma = 20; % [Hz] 0 for constant value = mean
+SeedGen.fs.mu = 13; % [Hz]
+SeedGen.fs.sigma = 0; % [Hz] 0 for constant value = mean
 % S-wave damping
-SeedGen.xis.mu = .4; % [ ]
-SeedGen.xis.sigma = 0.05; % [ ] 0 for constant value = mean
+SeedGen.xis.mu = .08; % [ ]
+SeedGen.xis.sigma = 0; % [ ] 0 for constant value = mean
 % S-wave energy participation
 SeedGen.Es = 0.28; % [% over the total energy transmited by the ground in a single explotion]
 
@@ -67,19 +67,17 @@ BlastModel.SiteY = -145;
 BlastModel.SigmaDelay = 2; %[ms]
 % Ratio of chaos in the signal
 BlastModel.R.mu = 0.8; % [ ]
-BlastModel.R.sigma = 0.05; % [ ] 0 for constant value = mean
+BlastModel.R.sigma = 0; % [ ] 0 for constant value = mean
 % Screening flag
-BlastModel.Sflag = 1;
+BlastModel.Sflag = 0;
 % Screening function
 BlastModel.Sfun = @(Ns,D) 1/(1+23337*sqrt(Ns)/D^2);
 % Global Scale Factor
 BlastModel.GSF = 0; % [mm/s] 0 or ~=0. if GSF=0 no global PPV scaling is applied
 
 
-
-
 %% RUN
-PPV = [1 2 3 4 5 10 15 20 25 30 40 50 60 70 80 90 100 125 150 175 200 225 250 275 300 325 350];
+PPV = [25 50 100 200 300 350 400 450 500 550 600 650 700];
 NPPV = numel(PPV);
 for j = 1:NPPV
     Run.ID = ['Solomon TSF1 PPV ',num2str(PPV(j)),' sin'];
@@ -89,7 +87,7 @@ for j = 1:NPPV
     % Output folder
     Run.OutPutFolder = fullfile(pwd,Run.ID);
     % Number of simulations
-    Run.Nsim = 10;
+    Run.Nsim = 1;
     % Export to slide flag
     Run.ETS = 1;
     % plotting flag
@@ -99,13 +97,14 @@ for j = 1:NPPV
 end
 for j = 1:NPPV
     Run.ID = ['Solomon TSF1 PPV ',num2str(PPV(j)),' blair'];
+    SeedGen.xis.mu = 1; % [ ]
     BlastModel.GSF = PPV(j); % [mm/s] 0 or ~=0. if GSF=0 no global PPV scaling is applied
     % Seed function
     SeedGen.fun = 'blair';
     % Output folder
     Run.OutPutFolder = fullfile(pwd,Run.ID);
     % Number of simulations
-    Run.Nsim = 10;
+    Run.Nsim = 1;
     % Export to slide flag
     Run.ETS = 1;
     % plotting flag
